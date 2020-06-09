@@ -740,7 +740,8 @@ class TokenTranslator:
 							next(tokens)
 							nextToken = next(tokens)
 							parent = nextToken.string
-							if nextToken.exact_type != NAME or parent in keywords:
+							if (nextToken.exact_type != NAME
+								or (parent in keywords and parent not in builtinConstructors)):
 								raise TokenParseError(nextToken,
 								    f'invalid superclass "{parent}"')
 							if parent not in self.constructors:
