@@ -11,6 +11,7 @@ except ImportError as e:
     raise RuntimeError('This script requires the LGSVL Python API to be installed') from e
 
 import scenic
+import scenic.simulators.lgsvl.simulator
 
 parser = argparse.ArgumentParser(
     prog='scenic.simulators.lgsvl',
