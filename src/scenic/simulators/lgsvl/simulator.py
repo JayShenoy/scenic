@@ -1,7 +1,6 @@
 """Interface from Scenic to LGSVL."""
 
 import lgsvl
-import dreamview
 
 import scenic.simulators.lgsvl.utils as utils
 
@@ -58,6 +57,11 @@ class LGSVLSimulation:
 
         Uses LG's interface which injects packets into Dreamview.
         """
+        try:
+            import dreamview
+        except ImportError as e:
+            raise RuntimeError('using Apollo requires the "dreamview" Python package') from e
+
         if self.apolloCar:
             raise RuntimeError('can only use one Apollo vehicle')
         self.apolloCar = lgsvlObj
