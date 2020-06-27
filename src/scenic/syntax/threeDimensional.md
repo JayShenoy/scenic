@@ -25,6 +25,11 @@ New syntax is necessary to support the usage of three dimensional geometry in sc
 
 ## Primitive Types
 
+| Syntax                | Description                                 |
+|-----------------------|---------------------------------------------|
+| PolyhedronRegion      | (A generalization of PolygonalRegion?)      |
+| PolyhedronVectorField | (A generalization of PolygonalVectorField?) |
+
 ## Constructible Types
 
 ## Specifiers
