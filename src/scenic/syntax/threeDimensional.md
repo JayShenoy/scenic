@@ -6,8 +6,6 @@ New syntax is necessary to support the usage of three dimensional geometry in sc
 | Syntax | Description                  |
 |--------|------------------------------|
 | rotate | parameters: pitch, roll, yaw |
-|        |                              |
-|        |                              |
 
 ## Prefix operators
 
@@ -15,14 +13,25 @@ New syntax is necessary to support the usage of three dimensional geometry in sc
 |--------|-------------|
 | top    |             |
 | bottom |             |
-|        |             |
 
 ## Infix Operators
+
+| Syntax        | Description |
+|---------------|-------------|
+| heading angle |             |
+| pitch angle   |             |
+| roll angle    |             |
+| tilt angle    |             |
 
 ## Primitive Types
 
 ## Constructible Types
 
 ## Specifiers
+
+| Syntax | Description |
+|--------|-------------|
+| above  |             |
+| below  |             |
 
 ## Constants
