@@ -29,7 +29,7 @@ __all__ = (
 	# Specifiers
 	'With',
 	'At', 'In', 'Beyond', 'VisibleFrom', 'VisibleSpec', 'OffsetBy', 'OffsetAlongSpec',
-	'Facing', 'FacingToward', 'ApparentlyFacing',
+	'Facing', 'FacingToward', 'FacingAwayFrom', 'ApparentlyFacing',
 	'LeftSpec', 'RightSpec', 'Ahead', 'Behind',
 	'Following',
 	# Constants
@@ -486,6 +486,15 @@ def FacingToward(pos):
 	pos = toVector(pos, 'specifier "facing toward X" with X not a vector')
 	return Specifier('heading', DelayedArgument({'position'},
 	                                            lambda self: self.position.angleTo(pos)))
+
+def FacingAwayFrom(pos):
+	"""The 'facing away from <vector>' specifier.
+
+	Specifies 'heading', depending on 'position'.
+	"""
+	pos = toVector(pos, 'specifier "facing away from X" with X not a vector')
+	return Specifier('heading', DelayedArgument({'position'},
+												lambda self: pos.angleTo(self.position)))
 
 def ApparentlyFacing(heading, fromPt=None):
 	"""The 'apparently facing <heading> [from <vector>]' specifier.

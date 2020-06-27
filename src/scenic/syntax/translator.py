@@ -280,6 +280,7 @@ pointSpecifiers = {
 orientedPointSpecifiers = {
 	('apparently', 'facing'): 'ApparentlyFacing',
 	('facing', 'toward'): 'FacingToward',
+	('facing', 'from'): 'FacingAwayFrom',
 	('facing',): 'Facing'
 }
 objectSpecifiers = {
@@ -553,6 +554,7 @@ class TokenParseError(ParseError):
 		self.lineno = line
 		super().__init__('Parse error in line ' + str(line) + ': ' + message)
 
+# TODO: Rewrite to work only on lists and have __next__ increment index 
 class Peekable:
 	"""Utility class to allow iterator lookahead."""
 	def __init__(self, gen):
@@ -719,10 +721,11 @@ class TokenTranslator:
 					injectToken((COMMA, ','))
 					skip = True
 			elif ttype == NAME:		# the interesting case: almost all new syntax falls in here
+				#TODO: Implement match 3-word constructs
 				# try to match 2-word language constructs
 				matched = False
 				nextToken = peek(tokens)		# lookahead so we can give 2-word ops precedence
-				if nextToken is not None:
+				if not matched and nextToken is not None:
 					endToken = nextToken	# tentatively; will be overridden if no match
 					nextString = nextToken.string
 					twoWords = (tstring, nextString)
