@@ -18,6 +18,7 @@ from scenic.core.geometry import headingOfSegment, triangulatePolygon, plotPolyg
 from scenic.core.type_support import toVector
 from scenic.core.utils import cached, areEquivalent
 
+# TODO: toPolyhedron method for pruning module 
 def toPolygon(thing):
 	if needsSampling(thing):
 		return None
@@ -29,6 +30,7 @@ def toPolygon(thing):
 		return thing.lineString
 	return None
 
+# TODO: regionFromPyMeshObject? 
 def regionFromShapelyObject(obj, orientation=None):
 	"""Build a 'Region' from Shapely geometry."""
 	assert obj.is_valid, obj
@@ -53,6 +55,7 @@ class PointInRegionDistribution(VectorDistribution):
 	def __str__(self):
 		return f'PointIn({self.region})'
 
+# TODO: Some methods need to be extended for 3D geometry 
 class Region(Samplable):
 	"""Abstract class for regions."""
 	def __init__(self, name, *dependencies, orientation=None):
@@ -272,6 +275,8 @@ class SectorRegion(Region):
 	def __str__(self):
 		return f'SectorRegion({self.center},{self.radius},{self.heading},{self.angle})'
 
+# TODO: Are there 3D shape regions we need to support? 
+
 class RectangularRegion(RotatedRectangle, Region):
 	def __init__(self, position, heading, width, height):
 		super().__init__('Rectangle', position, heading, width, height)
@@ -425,6 +430,16 @@ class PolylineRegion(Region):
 	def __hash__(self):
 		return hash(str(self.lineString))
 
+# TODO: PolyhedronRegion
+class PolyhedronRegion(Region):
+	def __init__(self):
+		return
+
+# TODO: PolyhedronSurfaceRegion
+class PolyhedronSurfaceRegion(Region):
+	def __init__(self):
+		return 
+
 class PolygonalRegion(Region):
 	"""Region given by one or more polygons (possibly with holes)"""
 	def __init__(self, points=None, polygon=None, orientation=None):
@@ -539,6 +554,7 @@ class PolygonalRegion(Region):
 		# TODO better way to hash mutable Shapely geometries? (also for PolylineRegion)
 		return hash((str(self.polygons), self.orientation))
 
+# TODO: Extend point set to include a set of points in 3D volume? 
 class PointSetRegion(Region):
 	"""Region consisting of a set of discrete points.
 
@@ -665,6 +681,7 @@ class GridRegion(PointSetRegion):
 					return False
 		return True
 
+# TODO: Extend for 3D region intersections? 
 class IntersectionRegion(Region):
 	def __init__(self, *regions, orientation=None, sampler=None):
 		self.regions = tuple(regions)
