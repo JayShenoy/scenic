@@ -6,14 +6,28 @@ defining the built-in functions, operators, specifiers, etc., it also stores
 global state such as the list of all created Scenic objects.
 """
 
+'''
+TODO: Extend with implementations of new 3D syntax and generalize existing syntax to 
+      dynamically handle 2D/3D geometry depending on dimension context 
+
+	  Extend existing syntax: AngleTo, AngleFrom, OffsetAlong, On, Vector Syntax, 
+	                          distributions (Uniform, Discrete, Normal), PointSetRegion,
+							  Beyond, Ahead, Behind, ...
+	  
+	  New Syntax: Rotate, Orient, Top, Bottom, PolyhedronRegion, PolyhedronSurfaceRegion,
+	              PolyhedronVectorField, Above, Below, HeadingAngle, PitchAngle, RollAngle,
+				  TiltAngle, Pitch, Roll, Yaw, Orientation, Underneath 
+'''
 __all__ = (
 	# Primitive statements and functions
 	'ego', 'require', 'resample', 'param', 'mutate', 'verbosePrint',
 	'sin', 'cos', 'hypot', 'max', 'min',
+	# --> 'Rotate', 'Orient'
 	# Prefix operators
 	'Visible',
 	'Front', 'Back', 'Left', 'Right',
 	'FrontLeft', 'FrontRight', 'BackLeft', 'BackRight',
+	# --> 'Top', 'Bottom'
 	# Infix operators
 	'FieldAt', 'RelativeTo', 'OffsetAlong', 'RelativePosition',
 	'RelativeHeading', 'ApparentHeading',
@@ -24,6 +38,7 @@ __all__ = (
 	'Workspace', 'Mutator',
 	'Range', 'Options', 'Uniform', 'Discrete', 'Normal',
 	'VerifaiParameter', 'VerifaiRange', 'VerifaiDiscreteRange', 'VerifaiOptions',
+	# --> 'PolyhedronRegion', 'PolyhedronSurfaceRegion', 'PolyhedronVectorField'
 	# Constructible types
 	'Point', 'OrientedPoint', 'Object',
 	# Specifiers
@@ -32,6 +47,8 @@ __all__ = (
 	'Facing', 'FacingToward', 'FacingAwayFrom', 'ApparentlyFacing',
 	'LeftSpec', 'RightSpec', 'Ahead', 'Behind',
 	'Following',
+	# --> 'Above', 'Below', 'HeadingAngle', 'PitchAngle', 'RollAngle', 'TiltAngle', 
+	# --> 'Pitch', 'Roll', 'Yaw', 'Orientation', 'Underneath'
 	# Constants
 	'everywhere', 'nowhere',
 	# Temporary stuff... # TODO remove
@@ -608,3 +625,34 @@ def Following(field, dist, fromPt=None):
 	heading = field[pos]
 	val = OrientedPoint(position=pos, heading=heading)
 	return Specifier('position', val, optionals={'heading'})
+
+
+########## New Syntax Specifications ##########
+def Above():
+	return
+
+def Below():
+	return 
+
+def HeadingAngle():
+	return 
+
+def PitchAngle():
+	return
+
+def RollAngle():
+	return
+
+def TiltAngle():
+	return
+
+def Pitch():
+	return
+
+def Roll():
+	return 
+
+def Yaw():
+	return 
+
+def Orientation(); 

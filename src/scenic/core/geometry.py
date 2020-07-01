@@ -14,6 +14,9 @@ from scenic.core.distributions import (needsSampling, distributionFunction,
 from scenic.core.lazy_eval import needsLazyEvaluation
 import scenic.core.utils as utils
 
+'''
+TODO: How to extend geometry with quaternions? 
+'''
 @distributionFunction
 def sin(x):
 	return math.sin(x)
@@ -58,6 +61,7 @@ def averageVectors(a, b, weight=0.5):
 	aw, bw = 1.0 - weight, weight
 	return (ax * aw + bx * bw, ay * aw + by * bw)
 
+# TODO: Rotate using quaternions? 
 def rotateVector(vector, angle):
 	x, y = vector
 	c, s = cos(angle), sin(angle)
@@ -118,10 +122,19 @@ def circumcircleOfAnnulus(center, heading, angle, minDist, maxDist):
 	r = math.sqrt(h2 + (g * g))
 	return radialToCartesian(center, d, heading), r
 
+# TODO: Generalize to 3D viw cone? 
 def pointIsInCone(point, base, heading, angle):
 	va = viewAngleToPoint(point, base, heading)
 	return (abs(va) <= angle / 2.0)
 
+'''
+TODO: Polyhedron mesh ops:
+		* Boolean Ops (Union, Intersect, Diffeence, ...)
+		* 2D project of curve onto 3D surface? 
+		* Mesh generation 
+			- How extensible should these be? 
+			- How to specify what the mesh should be?
+'''
 def polygonUnion(polys, tolerance=0.05, holeTolerance=0.002):
 	union = shapely.ops.unary_union(list(polys))
 	assert union.is_valid, union
@@ -181,6 +194,11 @@ class TriangulationError(RuntimeError):
 	"""
 	pass
 
+'''
+TODO: Polyhedron/Mesh triangulation
+		* PyMesh has methods for this, including getting 
+		  polyhedron's faces 
+'''
 def triangulatePolygon(polygon):
 	"""Triangulate the given Shapely polygon.
 
@@ -316,3 +334,8 @@ class RotatedRectangle:
 		# TODO refactor???
 		corners = [(x, y) for x, y in self.corners]		# convert Vectors to tuples
 		return shapely.geometry.Polygon(corners)
+
+'''
+TODO: Predefine basic 3D geometry for usage in scenes? 
+		* Beyond primitive geometry let simulator interface define the rest? 
+'''
