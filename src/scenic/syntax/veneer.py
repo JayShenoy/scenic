@@ -646,14 +646,5 @@ def RollAngle():
 def TiltAngle():
 	return
 
-def Pitch():
-	return
-
-def Roll():
-	return 
-
-def Yaw():
-	return 
-
 def Orientation(): 
 	return
