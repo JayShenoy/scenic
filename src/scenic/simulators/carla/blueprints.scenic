@@ -14,7 +14,7 @@ carModels = {
       'vehicle.mustang.mustang',
       'vehicle.jeep.wrangler_rubicon',
       'vehicle.lincoln.mkz2017',
-      'vehicle.mercedes-benz.coupe',
+      # 'vehicle.mercedes-benz.coupe',
       'vehicle.mini.cooperst',
       'vehicle.nissan.micra',
       'vehicle.nissan.patrol',
