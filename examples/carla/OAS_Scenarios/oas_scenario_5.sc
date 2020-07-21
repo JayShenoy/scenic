@@ -15,7 +15,6 @@ behavior FollowLane(target_speed=20):
 
 	""" Follow the lane that the vehicle is currently on """
 	# target_speed = 25 # km/hr
-
 	while True:
 		nearest_line_points = network.laneAt(self).centerline.nearestSegmentTo(self.position)
 		nearest_line_segment = PolylineRegion(nearest_line_points)
@@ -41,6 +40,7 @@ behavior FollowLeadCar(safety_distance=10):
 
 
 behavior LeadCarSuddenlyStopsAndGo():
+
 	take actions.SetManualFirstGearShiftAction()
 	take actions.SetManualGearShiftAction(False)
 	sudden_stop_time = (5, 8)
@@ -63,5 +63,5 @@ ego = Car on roads[1],
 other = Car ahead of ego by 10,
 		with behavior LeadCarSuddenlyStopsAndGo
 
-current_time = time.time()
-terminate when (time.time()-current_time > TERMINATE_TIME)
+#current_time = time.time()
+#terminate when (time.time()-current_time > TERMINATE_TIME)

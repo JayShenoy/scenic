@@ -31,8 +31,8 @@ behavior CollisionAvoidance(safety_distance=10, brake_intensity=0.3):
 
 behavior FollowLeadCar(safety_distance=10):
 
-	take actions.SetManualFirstGearShiftAction()
-	take actions.SetManualGearShiftAction(False)
+	# take actions.SetManualFirstGearShiftAction()
+	# take actions.SetManualGearShiftAction(False)
 
 	try: 
 		FollowLane(25)
@@ -50,8 +50,8 @@ behavior TerminateAfterTime(time_threshold=5):
 	terminate when True
 
 behavior LeadCarSuddenlyStops():
-	take actions.SetManualFirstGearShiftAction()
-	take actions.SetManualGearShiftAction(False)
+	# take actions.SetManualFirstGearShiftAction()
+	# take actions.SetManualGearShiftAction(False)
 	sudden_stop_time = (5, 8)
 
 	start_time = time.time()
@@ -64,10 +64,11 @@ behavior LeadCarSuddenlyStops():
 		TerminateAfterTime()
 
 
-roads = network.roads
-ego = Car on roads[1],
-		with behavior FollowLeadCar(10),
-		with blueprint 'vehicle.tesla.model3'
+# roads = network.roads
+# ego = Car on roads[1],
+# 		with behavior FollowLeadCar(10),
+# 		with blueprint 'vehicle.tesla.model3'
 
-other = Car ahead of ego by 10,
-		with behavior LeadCarSuddenlyStops
+# other = Car ahead of ego by 10,
+# 		with behavior LeadCarSuddenlyStops
+

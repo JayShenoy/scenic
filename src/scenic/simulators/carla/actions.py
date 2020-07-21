@@ -401,6 +401,7 @@ class PIDLateralController():
 	"""
 
 	def __init__(self, vehicle, K_P=0.01, K_D=0.000001, K_I=0.1, dt=0.1):
+	# def __init__(self, vehicle, K_P=0.5, K_D=0.0, K_I=0.0, dt=0.1):
 		"""
 		Constructor method. 0.0000005
 
