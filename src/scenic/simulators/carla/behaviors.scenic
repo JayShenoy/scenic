@@ -122,4 +122,3 @@ behavior FollowTrajectoryBehavior(target_speed = 25, trajectory = None):
 		take actions.FollowLaneAction(throttle=throttle, current_steer=current_steer_angle, past_steer=past_steer_angle)
 		# take actions.FollowLaneAction(throttle=throttle, current_steer=0, past_steer=0)
 		past_steer_angle = current_steer_angle
-
