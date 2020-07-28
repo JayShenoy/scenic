@@ -63,11 +63,13 @@ class CarlaSimulation(simulators.Simulation):
 		self.ego = None
 		for obj in self.objects:
 			# Extract blueprint
+			print(obj.blueprint)
 			blueprint = self.blueprintLib.find(obj.blueprint)
 
 			# Set up transform
 			loc = utils.scenicToCarlaLocation(obj.position, world=self.world)
 			rot = utils.scenicToCarlaRotation(obj.heading)
+			print(blueprint)
 			transform = carla.Transform(loc, rot)
 			
 			# # Create Carla actor
@@ -75,7 +77,7 @@ class CarlaSimulation(simulators.Simulation):
 			if carlaActor is None:
 				raise simulators.SimulationCreationError(
 				    f'Unable to spawn object {type(obj)} at position {obj.position}, '
-				    'likely from a spawn collision'
+				    f'likely from a spawn collision. Of model {obj.blueprint} '
 				)
 
 			if isinstance(carlaActor, carla.Vehicle):

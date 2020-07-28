@@ -558,7 +558,11 @@ description = "tox is a generic virtualenv management and test command line tool
 name = "tox"
 optional = true
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
+<<<<<<< HEAD
 version = "3.17.1"
+=======
+version = "3.17.0"
+>>>>>>> carla
 
 [package.dependencies]
 colorama = ">=0.4.1"
@@ -619,7 +623,11 @@ gpc_triangulation = ["Polygon3"]
 guideways = ["pyproj"]
 
 [metadata]
+<<<<<<< HEAD
 content-hash = "4860bffdbb36572cbddea4a5450b2b4c6255ebffcfe49493d5b50b2cc5324d68"
+=======
+content-hash = "45dfb1e8edef25e5d1ea42778edab27c2efbcfd8d20f6c45721754077b435331"
+>>>>>>> carla
 python-versions = "^3.8"
 
 [metadata.files]
@@ -1047,8 +1055,13 @@ toml = [
     {file = "toml-0.10.1.tar.gz", hash = "sha256:926b612be1e5ce0634a2ca03470f95169cf16f939018233a670519cb4ac58b0f"},
 ]
 tox = [
+<<<<<<< HEAD
     {file = "tox-3.17.1-py2.py3-none-any.whl", hash = "sha256:cf130909a224515f6c894023150ccc860c4cf5ecad64f583b9d43ed1aa7e5da8"},
     {file = "tox-3.17.1.tar.gz", hash = "sha256:5968c07b3aeea715ac2fe723a912e0b6a0c53bebad24fc37eb559b7497f217fa"},
+=======
+    {file = "tox-3.17.0-py2.py3-none-any.whl", hash = "sha256:df4e418bee73acf258dcba1b1d9c6af0caea5d9105005ecf1b10a9a45c91dbdc"},
+    {file = "tox-3.17.0.tar.gz", hash = "sha256:1abf2ff7add9fabe95848af14cfe3c412361bef1ce52f7ceb4ff88d289e306ac"},
+>>>>>>> carla
 ]
 urllib3 = [
     {file = "urllib3-1.25.9-py2.py3-none-any.whl", hash = "sha256:88206b0eb87e6d677d424843ac5209e3fb9d0190d0ee169599165ec25e9d9115"},

@@ -5,7 +5,8 @@ from scenic.core.geometry import subtractVectors
 from scenic.simulators.domains.driving.network import loadNetwork
 loadNetwork('/home/carla_challenge/Downloads/Town01.xodr')
 
-from scenic.simulators.carla.models.model import *
+# from scenic.simulators.carla.models.model import *
+from scenic.simulators.carla.model import * #note in scenic-devel-findaheng this is scenic.simulators.carla.models.model 
 
 
 """
@@ -53,7 +54,7 @@ behavior FastCarBehavior():
 behavior SlowCarBehavior():
 	take actions.SetManualFirstGearShiftAction()
 	take actions.SetManualGearShiftAction(False)
-	take actions.SetThrottleAction(0.1)
+	take actions.SetThrottleAction(0.0)
 	print("zoom")
 
 
@@ -98,20 +99,21 @@ initLaneSec = Options(laneSecsWithLeftLane)
 # initLaneSec = laneSecsWithLeftLane[22] # NOTE: Hard coded for testing
 leftLaneSec = initLaneSec.laneToLeft
 
-spawnPt = initLaneSec.centerline[3]  # NOTE: Hard coded for testing
-spawnVec = Vector(spawnPt[0], spawnPt[1])
+# spawnPt = initLaneSec.centerline[3]  # NOTE: Hard coded for testing
+spawnVec = Point on initLaneSec.centerline
+# spawnVec = Vector(spawnPt[0], spawnPt[1])
 
 slowCar = Car at spawnVec,
-	with speed 0,
+	with speed 10,
 	with behavior SlowCarBehavior
 
 fastCar = Car behind slowCar by 2*FOLLOWING_DISTANCE,
-	with speed 0,
-	with behavior FastCarBehavior
+	with speed 10,
+	with behavior SlowCarBehavior
 
 ego = Car behind slowCar by 4*FOLLOWING_DISTANCE,
-	with speed 0, # changed to 4 from 12 so the SetThrottle action is more obvious visually.
-	with behavior EgoBehavior
+	with speed 10, # changed to 4 from 12 so the SetThrottle action is more obvious visually.
+	with behavior SlowCarBehavior
 
 # pedestrian1 = Pedestrian right of slowCar by 5
 
