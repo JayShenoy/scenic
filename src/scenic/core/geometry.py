@@ -41,6 +41,12 @@ def normalizeAngle(angle):
 	assert -math.pi <= angle <= math.pi
 	return angle
 
+def dotProduct(a, b):
+	return ((a.x * b.x) + (a.y * b.y) + (a.z * b.z))
+
+def norm(a):
+	return math.sqrt(math.pow(a.x, 2) + math.pow(a.y, 2) + math.pow(a.z, 2)) 
+
 def addVectors(a, b):
 	ax, ay = a[0], a[1]
 	bx, by = b[0], b[1]

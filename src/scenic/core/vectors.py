@@ -8,12 +8,13 @@ import itertools
 import functools
 
 import shapely.geometry
+from pyquaternion import Quaternion 
 
 from scenic.core.distributions import (Samplable, Distribution, MethodDistribution,
                                        needsSampling, makeOperatorHandler, distributionMethod)
 from scenic.core.lazy_eval import valueInContext, needsLazyEvaluation, makeDelayedFunctionCall
 import scenic.core.utils as utils
-from scenic.core.geometry import normalizeAngle
+from scenic.core.geometry import normalizeAngle, dotProduct, norm
 
 class VectorDistribution(Distribution):
 	"""A distribution over Vectors."""
@@ -137,10 +138,65 @@ def vectorDistributionMethod(method):
 			return method(self, *args, **kwargs)
 	return helper
 
+class Orientation(Samplable):
+	"""A quaternion representation of an orientation whose coordinates can be distributions."""
+	def __init__(self, w, x, y, z=0):
+		self.orientation = Quaternion(axis=[x, y, z], angle=w)
+		self.coordinates = (w, x, y, z)
+		super().__init__(self.coordinates)
+
+
+	@property
+	def w(self):
+		return self.coordinates[0]
+
+	@property
+	def x(self):
+		return self.coordinates[1]
+
+	@property
+	def y(self):
+		return self.coordinates[2]
+
+	@property
+	def z(self):
+		return self.coordinates[3]
+
+	def __mul__(self, b):
+		return 
+
+	def _multiply_with_quaternion(self, q2):
+		return
+
+	def _multiply_with_vector(self, v):
+		return
+
+	def rotate_vector(self, v):
+		return
+
+	def get_rotation_axis(self):
+		return
+
+	def get_rotation_angle(self):
+		return
+
+	def get_inverse(self):
+		return 
+
+	def get_conjugate(self):
+		return 
+
+	def get_normalised(self):
+		return
+
+	def __repr__(self):
+		return
+
+
 class Vector(Samplable, collections.abc.Sequence):
 	"""A 2D vector, whose coordinates can be distributions."""
-	def __init__(self, x, y):
-		self.coordinates = (x, y)
+	def __init__(self, x, y, z=0):
+		self.coordinates = (x, y, z)
 		super().__init__(self.coordinates)
 
 	@property
@@ -150,6 +206,10 @@ class Vector(Samplable, collections.abc.Sequence):
 	@property
 	def y(self):
 		return self.coordinates[1]
+
+	@property
+	def z(self):
+		return self.coordinates[2]
 
 	def toVector(self):
 		return self
@@ -163,7 +223,8 @@ class Vector(Samplable, collections.abc.Sequence):
 	@vectorOperator
 	def rotatedBy(self, angle):
 		"""Return a vector equal to this one rotated counterclockwise by the given angle."""
-		x, y = self.x, self.y
+		# TODO: Implement Orientation class to rotate a vector with quaternion 
+		x, y, z = self.x, self.y, self.z
 		c, s = cos(angle), sin(angle)
 		return Vector((c * x) - (s * y), (s * x) + (c * y))
 
@@ -178,29 +239,31 @@ class Vector(Samplable, collections.abc.Sequence):
 
 	@scalarOperator
 	def distanceTo(self, other):
-		dx, dy = other.toVector() - self
-		return math.hypot(dx, dy)
+		dx, dy, dz = other.toVector() - self
+		return math.hypot(dx, dy, dz)
 
 	@scalarOperator
 	def angleTo(self, other):
-		dx, dy = other.toVector() - self
+		# TODO: Incorrect. Implement orientation class and use quaternion to get direction self needs to go to other 
+		# return normalizeAngle(math.acos(dotProduct(self, other) / norm(self) * norm(other))) - (math.pi / 2)
+		dx, dy, dz = other.toVector() - self
 		return normalizeAngle(math.atan2(dy, dx) - (math.pi / 2))
 
 	@vectorOperator
 	def __add__(self, other):
-		return Vector(self[0] + other[0], self[1] + other[1])
+		return Vector(self[0] + other[0], self[1] + other[1], self[2] + other[2])
 
 	@vectorOperator
 	def __radd__(self, other):
-		return Vector(self[0] + other[0], self[1] + other[1])
+		return Vector(self[0] + other[0], self[1] + other[1], self[2] + other[2])
 
 	@vectorOperator
 	def __sub__(self, other):
-		return Vector(self[0] - other[0], self[1] - other[1])
+		return Vector(self[0] - other[0], self[1] - other[1], self[2] - other[2])
 
 	@vectorOperator
 	def __rsub__(self, other):
-		return Vector(other[0] - self[0], other[1] - self[1])
+		return Vector(other[0] - self[0], other[1] - self[1], self[2] - other[2])
 
 	def __len__(self):
 		return len(self.coordinates)
@@ -209,7 +272,8 @@ class Vector(Samplable, collections.abc.Sequence):
 		return self.coordinates[index]
 
 	def __repr__(self):
-		return f'({self.x} @ {self.y})'
+		return f'({self.x}, {self.y}, {self.z})'
+		# return f'({self.x} @ {self.y} @ {self.z})'
 
 	def __eq__(self, other):
 		if type(other) is not Vector:
@@ -222,8 +286,8 @@ class Vector(Samplable, collections.abc.Sequence):
 VectorDistribution.defaultValueType = Vector
 
 class OrientedVector(Vector):
-	def __init__(self, x, y, heading):
-		super().__init__(x, y)
+	def __init__(self, x, y, z, heading):
+		super().__init__(x, y, z)
 		self.heading = heading
 
 	def toHeading(self):
