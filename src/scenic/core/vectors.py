@@ -138,13 +138,12 @@ def vectorDistributionMethod(method):
 			return method(self, *args, **kwargs)
 	return helper
 
-class Orientation(Samplable):
+class Orientation(Samplable, collections.abc.Sequence):
 	"""A quaternion representation of an orientation whose coordinates can be distributions."""
 	def __init__(self, w, x, y, z=0):
 		self.orientation = Quaternion(axis=[x, y, z], angle=w)
 		self.coordinates = (w, x, y, z)
 		super().__init__(self.coordinates)
-
 
 	@property
 	def w(self):
@@ -162,8 +161,36 @@ class Orientation(Samplable):
 	def z(self):
 		return self.coordinates[3]
 
-	def __mul__(self, b):
-		return 
+	def __mul__(self, other):
+		if type(q) is not Orientation:
+			return NotImplemented
+		return self.orientation * b.orientation
+
+	def __add__(self, other):
+		if type(other) is not Orientation:
+			return NotImplemented
+		return self.orientation + q.orientation
+
+	def __sub__(self, other):
+		if type(other) is not Orientation:
+			return NotImplemented
+		return self.orientation - self.orientation
+
+	def __div__(self, other):
+		if type(other) is not Orientation:
+			return NotImplemented
+		return self.orientation / self.orientation
+
+	def __eq__(self, other):
+		if type(other) is not Orientation:
+			return NotImplemented
+		return other.orientation == self.orientation
+
+	def __getitem__(self, index):
+		return self.coordinates[index]
+
+	def __len__(self):
+		return len(self.coordinates)
 
 	def _multiply_with_quaternion(self, q2):
 		return
@@ -172,25 +199,32 @@ class Orientation(Samplable):
 		return
 
 	def rotate_vector(self, v):
-		return
+		return self.rotate(Quaternion(vector=(v)))
 
 	def get_rotation_axis(self):
-		return
+		return self.orientation.axis
 
-	def get_rotation_angle(self):
-		return
+	def get_rotation_angle_degrees(self):
+		return self.orientation.degrees
+
+	def get_rotation_angle_radians(self):
+		return self.orientation.radians
 
 	def get_inverse(self):
-		return 
+		return self.orientation.inverse
 
 	def get_conjugate(self):
-		return 
+		# For a unit quaternion this is the same as get_inverse().
+		return self.orientation.conjugate
+
+	def get_norm(self):
+		return self.orientation.norm
 
 	def get_normalised(self):
-		return
+		return self.orientation.unit
 
 	def __repr__(self):
-		return
+		return repr(self.orientation)
 
 
 class Vector(Samplable, collections.abc.Sequence):
