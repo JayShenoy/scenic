@@ -208,7 +208,7 @@ def test_offset_by():
 def test_offset_along_heading():
     ego = sampleEgoFrom('ego = Object at 3@2 offset along 45 deg by -4@10')
     d = 1 / math.sqrt(2)
-    assert tuple(ego.position) == pytest.approx((3 - 10*d - 4*d, 2 + 10*d - 4*d))
+    assert tuple(ego.position) == pytest.approx((3 - 10*d - 4*d, 2 + 10*d - 4*d, 0))
 
 def test_offset_along_field():
     ego = sampleEgoFrom(
@@ -216,7 +216,7 @@ def test_offset_along_field():
         'ego = Object at 15@7 offset along vf by 2@-3'
     )
     d = 1 / math.sqrt(2)
-    assert tuple(ego.position) == pytest.approx((15 + 3*d + 2*d, 7 - 3*d + 2*d))
+    assert tuple(ego.position) == pytest.approx((15 + 3*d + 2*d, 7 - 3*d + 2*d, 0))
 
 ## Region operators
 

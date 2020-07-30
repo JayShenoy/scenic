@@ -171,7 +171,8 @@ class Map:
 	@distributionMethod
 	def roadHeadingAt(self, point):
 		# find closest edge
-		distance, location = self.edgeTree.query(point)
+		# TODO: @pytest Updated to include z component. Fix this? 
+		distance, location, z = self.edgeTree.query(point)
 		closest = tuple(self.edgeTree.data[location])
 		# get direction of edge
 		return self.gridToScenicHeading(self.edgeData[closest].tangent)
