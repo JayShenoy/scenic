@@ -138,6 +138,11 @@ def vectorDistributionMethod(method):
 			return method(self, *args, **kwargs)
 	return helper
 
+def orientationOperator(method):
+	"""Decorator for orientation operators that yield orientations."""
+	op = method.__name__
+	setattr()
+
 class Orientation(Samplable, collections.abc.Sequence):
 	"""A quaternion representation of an orientation whose coordinates can be distributions."""
 	def __init__(self, w, x, y, z=0):
@@ -162,24 +167,24 @@ class Orientation(Samplable, collections.abc.Sequence):
 		return self.coordinates[3]
 
 	def __mul__(self, other):
-		if type(q) is not Orientation:
+		if type(other) is not Orientation:
 			return NotImplemented
-		return self.orientation * b.orientation
+		return other.orientation * self.orientation
 
 	def __add__(self, other):
 		if type(other) is not Orientation:
 			return NotImplemented
-		return self.orientation + q.orientation
+		return other.orientation + self.orientation
 
 	def __sub__(self, other):
 		if type(other) is not Orientation:
 			return NotImplemented
-		return self.orientation - self.orientation
+		return other.orientation - self.orientation
 
-	def __div__(self, other):
+	def __truediv__(self, other):
 		if type(other) is not Orientation:
 			return NotImplemented
-		return self.orientation / self.orientation
+		return other.orientation / self.orientation
 
 	def __eq__(self, other):
 		if type(other) is not Orientation:
@@ -192,14 +197,8 @@ class Orientation(Samplable, collections.abc.Sequence):
 	def __len__(self):
 		return len(self.coordinates)
 
-	def _multiply_with_quaternion(self, q2):
-		return
-
-	def _multiply_with_vector(self, v):
-		return
-
 	def rotate_vector(self, v):
-		return self.rotate(Quaternion(vector=(v)))
+		return self.orientation.rotate(Quaternion(vector=(v))) #TODO: Convert to vector. This returns Quaternion object
 
 	def get_rotation_axis(self):
 		return self.orientation.axis
