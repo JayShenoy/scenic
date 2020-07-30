@@ -8,6 +8,7 @@ import numpy
 import scipy.spatial
 import shapely.geometry
 import shapely.ops
+import pymesh
 
 from scenic.core.distributions import Samplable, RejectionException, needsSampling
 from scenic.core.lazy_eval import valueInContext
@@ -119,7 +120,8 @@ class Region(Samplable):
 		if self.orientation is None:
 			return vec
 		else:
-			return OrientedVector(vec.x, vec.y, self.orientation[vec])
+			# TODO: @pytest Updated to include z-component. Is this correct?
+			return OrientedVector(vec.x, vec.y, vec.z, self.orientation[vec])
 
 	def __str__(self):
 		return f'<Region {self.name}>'
@@ -190,8 +192,9 @@ class CircularRegion(Region):
 		point = point.toVector()
 		return point.distanceTo(self.center) <= self.radius
 
+	# TODO: @pytest Update to 3D 
 	def uniformPointInner(self):
-		x, y = self.center
+		x, y, z = self.center
 		r = random.triangular(0, self.radius, self.radius)
 		t = random.uniform(-math.pi, math.pi)
 		pt = Vector(x + (r * cos(t)), y + (r * sin(t)))
@@ -253,7 +256,8 @@ class SectorRegion(Region):
 		return point.distanceTo(self.center) <= self.radius
 
 	def uniformPointInner(self):
-		x, y = self.center
+		# TODO: @pytest Update to 3d
+		x, y, z = self.center
 		heading, angle, maxDist = self.heading, self.angle, self.radius
 		r = random.triangular(0, maxDist, maxDist)
 		ha = angle / 2.0
@@ -538,6 +542,17 @@ class PolygonalRegion(Region):
 	def __hash__(self):
 		# TODO better way to hash mutable Shapely geometries? (also for PolylineRegion)
 		return hash((str(self.polygons), self.orientation))
+
+class PolyhedronRegion(Region):
+	"""Region given by a Polyhedron"""
+	def __init__(self, name=None, polyhedron=None, orientation=None):
+		super().__init__('Polyhedron', orientation=orientation)
+
+	def intersect(self, other):
+		return NotImplemented
+
+	def union(self, other):
+		return NotImplemented
 
 class PointSetRegion(Region):
 	"""Region consisting of a set of discrete points.

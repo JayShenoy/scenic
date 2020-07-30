@@ -33,6 +33,7 @@ numpy = "^1.18.2"
 pillow = "^7.1.1"
 pynverse = "^0.1.4"
 pyquaternion = "^0.9.5"
+pymesh = "^1.0.2"
 
 Polygon3 = {version = "^3.0.8", optional = true}
 

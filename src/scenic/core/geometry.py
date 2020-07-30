@@ -89,13 +89,15 @@ def positionRelativeToPoint(point, heading, offset):
 	return addVectors(point, ro)
 
 def headingOfSegment(pointA, pointB):
-	ax, ay = pointA
-	bx, by = pointB
+	# TODO: @pytest Update to 3D 
+	ax, ay, az = pointA
+	bx, by, bz = pointB
 	return math.atan2(by - ay, bx - ax) - (math.pi / 2.0)
 
+# TODO: @pytest Update to 3D view angle 
 def viewAngleToPoint(point, base, heading):
-	x, y = base
-	ox, oy = point
+	x, y, z= base
+	ox, oy, oz = point
 	a = math.atan2(oy - y, ox - x) - (heading + (math.pi / 2.0))
 	if a < -math.pi:
 		a += math.tau
@@ -105,8 +107,9 @@ def viewAngleToPoint(point, base, heading):
 	return a
 
 def apparentHeadingAtPoint(point, heading, base):
-	x, y = base
-	ox, oy = point
+	# TODO: @pytest Update to 3D. 
+	x, y, z = base
+	ox, oy, oz = point
 	a = (heading + (math.pi / 2.0)) - math.atan2(oy - y, ox - x)
 	if a < -math.pi:
 		a += math.tau
@@ -274,16 +277,18 @@ def plotPolygon(polygon, plt, style='r-'):
 
 class RotatedRectangle:
 	"""mixin providing collision detection for rectangular objects and regions"""
+	# TODO: @pytest Update to 3D
 	def containsPoint(self, point):
 		diff = point - self.position.toVector()
-		x, y = diff.rotatedBy(-self.heading)
+		x, y, z = diff.rotatedBy(-self.heading)
 		return abs(x) <= self.hw and abs(y) <= self.hh
 
 	def intersects(self, rect):
+		# TODO: @pytest Update to 3D 
 		if not isinstance(rect, RotatedRectangle):
 			raise RuntimeError(f'tried to intersect RotatedRectangle with {type(rect)}')
 		# Quick check by bounding circles
-		dx, dy = rect.position.toVector() - self.position.toVector()
+		dx, dy, dz = rect.position.toVector() - self.position.toVector()
 		rr = self.radius + rect.radius
 		if (dx * dx) + (dy * dy) > (rr * rr):
 			return False

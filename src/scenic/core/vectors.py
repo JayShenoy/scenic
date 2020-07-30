@@ -144,7 +144,7 @@ def orientationOperator(method):
 	setattr()
 
 class Orientation(Samplable, collections.abc.Sequence):
-	"""A quaternion representation of an orientation whose coordinates can be distributions."""
+	"""A quaternion representation of an orientation whose rotation axis and angle can be distributions."""
 	def __init__(self, w, x, y, z=0):
 		self.orientation = Quaternion(axis=[x, y, z], angle=w)
 		self.coordinates = (w, x, y, z)
@@ -279,6 +279,7 @@ class Vector(Samplable, collections.abc.Sequence):
 	def angleTo(self, other):
 		# TODO: Incorrect. Implement orientation class and use quaternion to get direction self needs to go to other 
 		# return normalizeAngle(math.acos(dotProduct(self, other) / norm(self) * norm(other))) - (math.pi / 2)
+		# 
 		dx, dy, dz = other.toVector() - self
 		return normalizeAngle(math.atan2(dy, dx) - (math.pi / 2))
 
