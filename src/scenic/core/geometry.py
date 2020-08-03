@@ -88,12 +88,12 @@ def positionRelativeToPoint(point, heading, offset):
 	return addVectors(point, ro)
 
 def headingOfSegment(pointA, pointB):
-	# TODO: @pytest Update to 3D. Requires orientation
+	# TODO: @pytest Update to 3D 
 	ax, ay, az = pointA
 	bx, by, bz = pointB
 	return math.atan2(by - ay, bx - ax) - (math.pi / 2.0)
 
-# TODO: @pytest Update to 3D view angle. Requires orientation
+# TODO: @pytest Update to 3D view angle 
 def viewAngleToPoint(point, base, heading):
 	x, y, z= base
 	ox, oy, oz = point
@@ -106,7 +106,7 @@ def viewAngleToPoint(point, base, heading):
 	return a
 
 def apparentHeadingAtPoint(point, heading, base):
-	# TODO: @pytest Update to 3D. Requires orientation
+	# TODO: @pytest Update to 3D. 
 	x, y, z = base
 	ox, oy, oz = point
 	a = (heading + (math.pi / 2.0)) - math.atan2(oy - y, ox - x)
@@ -280,34 +280,11 @@ class RotatedRectangle:
 	"""mixin providing collision detection for rectangular objects and regions"""
 	# TODO: @pytest Update to 3D
 	def containsPoint(self, point):
-<<<<<<< HEAD
 		pt = shapely.geometry.Point(point)
 		return self.polygon.intersects(pt)
 
 	def intersects(self, rect):
 		return self.polygon.intersects(rect.polygon)
-=======
-		diff = point - self.position.toVector()
-		x, y, z = diff.rotatedBy(-self.heading)
-		return abs(x) <= self.hw and abs(y) <= self.hh
-
-	def intersects(self, rect):
-		# TODO: @pytest Update to 3D 
-		if not isinstance(rect, RotatedRectangle):
-			raise RuntimeError(f'tried to intersect RotatedRectangle with {type(rect)}')
-		# Quick check by bounding circles
-		dx, dy, dz = rect.position.toVector() - self.position.toVector()
-		rr = self.radius + rect.radius
-		if (dx * dx) + (dy * dy) > (rr * rr):
-			return False
-		# Check for separating line parallel to our edges
-		if self.edgeSeparates(self, rect):
-			return False
-		# Check for separating line parallel to rect's edges
-		if self.edgeSeparates(rect, self):
-			return False
-		return True
->>>>>>> Identifying methods that need to be updated from pytest results
 
 	@cached_property
 	def polygon(self):
