@@ -57,7 +57,7 @@ import inspect
 from scenic.core.distributions import Distribution, toDistribution
 from scenic.core.type_support import isA, toType, toTypes, toScalar, toHeading, toVector
 from scenic.core.type_support import evaluateRequiringEqualTypes, underlyingType
-from scenic.core.geometry import RotatedRectangle, normalizeAngle, apparentHeadingAtPoint
+from scenic.core.geometry import normalizeAngle, apparentHeadingAtPoint
 from scenic.core.object_types import Constructible
 from scenic.core.specifiers import Specifier
 from scenic.core.lazy_eval import DelayedArgument
