@@ -280,7 +280,9 @@ pointSpecifiers = {
 orientedPointSpecifiers = {
 	('apparently', 'facing'): 'ApparentlyFacing',
 	('facing', 'toward'): 'FacingToward',
-	('facing',): 'Facing'
+	('facing',): 'Facing',
+	('facing', 'away', 'from'): 'FacingAwayFrom',
+	('facing', 'directly', 'toward'): 'FacingDirectlyToward'
 }
 objectSpecifiers = {
 }
@@ -719,81 +721,100 @@ class TokenTranslator:
 					injectToken((COMMA, ','))
 					skip = True
 			elif ttype == NAME:		# the interesting case: almost all new syntax falls in here
-				# try to match 2-word language constructs
+				# try to match 3-word language constructs
 				matched = False
-				nextToken = peek(tokens)		# lookahead so we can give 2-word ops precedence
+				nextToken = peek(tokens)
 				if nextToken is not None:
-					endToken = nextToken	# tentatively; will be overridden if no match
 					nextString = nextToken.string
-					twoWords = (tstring, nextString)
-					if startOfLine and tstring == 'for':	# TODO improve hack?
-						matched = True
-						endToken = token
-					elif startOfLine and tstring in constructorStatements:	# class definition
-						if nextToken.type != NAME or nextString in keywords:
-							raise TokenParseError(nextToken,
-							    f'invalid class name "{nextString}"')
-						nextToken = next(tokens)	# consume name
-						parent = None
-						pythonClass = False
-						if peek(tokens).exact_type == LPAR:		# superclass specification
-							next(tokens)
-							nextToken = next(tokens)
-							parent = nextToken.string
-							if nextToken.exact_type != NAME or parent in keywords:
+					if nextString == 'facing': # Hack-y special case for 3-word construct 
+						nextNextToken = next(tokens)
+						print(nextNextToken.string)
+						if nextNextToken is not None:
+							nextString = nextToken.string
+							nextNextString = nextToken.string
+							threeWords = (tstring, nextString, nextNextString)
+							print(threeWords)
+							if not startOfLine and threeWords in allowedInfixOps: # 3-word Infix Ops 
+								injectToken(allowedInfixOps[twoWords])
+								advance() # Consume second word 
+								advance() # Consume third word
+								skip = True
+								matched = True
+				# 3-word constructs don't match; try to match 2-word language constructs
+				if not matched:
+					nextToken = peek(tokens)		# lookahead so we can give 2-word ops precedence
+					if nextToken is not None:
+						endToken = nextToken	# tentatively; will be overridden if no match
+						nextString = nextToken.string
+						twoWords = (tstring, nextString)
+						if startOfLine and tstring == 'for':	# TODO improve hack?
+							matched = True
+							endToken = token
+						elif startOfLine and tstring in constructorStatements:	# class definition
+							if nextToken.type != NAME or nextString in keywords:
 								raise TokenParseError(nextToken,
-								    f'invalid superclass "{parent}"')
-							if parent not in self.constructors:
-								if tstring != 'class':
-									raise TokenParseError(nextToken,
-									    f'superclass "{parent}" is not a Scenic class')
-								# appears to be a Python class definition
-								pythonClass = True
-							else:
+									f'invalid class name "{nextString}"')
+							nextToken = next(tokens)	# consume name
+							parent = None
+							pythonClass = False
+							if peek(tokens).exact_type == LPAR:		# superclass specification
+								next(tokens)
 								nextToken = next(tokens)
-								if nextToken.exact_type != RPAR:
+								parent = nextToken.string
+								if nextToken.exact_type != NAME or parent in keywords:
 									raise TokenParseError(nextToken,
-									                      'malformed class definition')
-						injectToken((NAME, 'class'), spaceAfter=1)
-						injectToken((NAME, nextString))
-						injectToken((LPAR, '('))
-						if pythonClass:		# pass Python class definitions through unchanged
-							while nextToken.exact_type != COLON:
+										f'invalid superclass "{parent}"')
+								if parent not in self.constructors:
+									if tstring != 'class':
+										raise TokenParseError(nextToken,
+											f'superclass "{parent}" is not a Scenic class')
+									# appears to be a Python class definition
+									pythonClass = True
+								else:
+									nextToken = next(tokens)
+									if nextToken.exact_type != RPAR:
+										raise TokenParseError(nextToken,
+															'malformed class definition')
+							injectToken((NAME, 'class'), spaceAfter=1)
+							injectToken((NAME, nextString))
+							injectToken((LPAR, '('))
+							if pythonClass:		# pass Python class definitions through unchanged
+								while nextToken.exact_type != COLON:
+									injectToken(nextToken)
+									nextToken = next(tokens)
 								injectToken(nextToken)
-								nextToken = next(tokens)
-							injectToken(nextToken)
-						else:
-							if peek(tokens).exact_type != COLON:
-								raise TokenParseError(nextToken, 'malformed class definition')
-							parent = self.createConstructor(nextString, parent)
-							injectToken((NAME, parent))
-							injectToken((RPAR, ')'))
-						skip = True
-						matched = True
-						endToken = nextToken
-					elif twoWords in allowedPrefixOps:	# 2-word prefix operator
-						callFunction(allowedPrefixOps[twoWords])
-						advance()	# consume second word
-					elif not startOfLine and twoWords in allowedInfixOps:	# 2-word infix operator
-						injectToken(allowedInfixOps[twoWords])
-						advance()	# consume second word
-						skip = True
-						matched = True
-					elif inConstructorContext and tstring == 'with':	# special case for 'with' specifier
-						callFunction('With', argument=f'"{nextString}"')
-						advance()	# consume property name
-					elif tstring == requireStatement and nextString == '[':		# special case for require[p]
-						next(tokens)	# consume '['
-						nextToken = next(tokens)
-						if nextToken.exact_type != NUMBER:
-							raise TokenParseError(nextToken,
-							    'soft requirement must have constant probability')
-						prob = nextToken.string
-						nextToken = next(tokens)
-						if nextToken.exact_type != RSQB:
-							raise TokenParseError(nextToken, 'malformed soft requirement')
-						callFunction(requireStatement, argument=prob)
-						endToken = nextToken
+							else:
+								if peek(tokens).exact_type != COLON:
+									raise TokenParseError(nextToken, 'malformed class definition')
+								parent = self.createConstructor(nextString, parent)
+								injectToken((NAME, parent))
+								injectToken((RPAR, ')'))
+							skip = True
+							matched = True
+							endToken = nextToken
+						elif twoWords in allowedPrefixOps:	# 2-word prefix operator
+							callFunction(allowedPrefixOps[twoWords])
+							advance()	# consume second word
+						elif not startOfLine and twoWords in allowedInfixOps:	# 2-word infix operator
+							injectToken(allowedInfixOps[twoWords])
+							advance()	# consume second word
+							skip = True
+							matched = True
+						elif inConstructorContext and tstring == 'with':	# special case for 'with' specifier
+							callFunction('With', argument=f'"{nextString}"')
+							advance()	# consume property name
+						elif tstring == requireStatement and nextString == '[':		# special case for require[p]
+							next(tokens)	# consume '['
+							nextToken = next(tokens)
+							if nextToken.exact_type != NUMBER:
+								raise TokenParseError(nextToken,
+									'soft requirement must have constant probability')
+							prob = nextToken.string
+							nextToken = next(tokens)
+							if nextToken.exact_type != RSQB:
+								raise TokenParseError(nextToken, 'malformed soft requirement')
+							callFunction(requireStatement, argument=prob)
+							endToken = nextToken
 				if not matched:
 					# 2-word constructs don't match; try 1-word
 					endToken = token

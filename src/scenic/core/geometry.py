@@ -89,12 +89,12 @@ def positionRelativeToPoint(point, heading, offset):
 	return addVectors(point, ro)
 
 def headingOfSegment(pointA, pointB):
-	# TODO: @pytest Update to 3D 
+	# TODO: @pytest Update to 3D. Requires orientation
 	ax, ay, az = pointA
 	bx, by, bz = pointB
 	return math.atan2(by - ay, bx - ax) - (math.pi / 2.0)
 
-# TODO: @pytest Update to 3D view angle 
+# TODO: @pytest Update to 3D view angle. Requires orientation
 def viewAngleToPoint(point, base, heading):
 	x, y, z= base
 	ox, oy, oz = point
@@ -107,7 +107,7 @@ def viewAngleToPoint(point, base, heading):
 	return a
 
 def apparentHeadingAtPoint(point, heading, base):
-	# TODO: @pytest Update to 3D. 
+	# TODO: @pytest Update to 3D. Requires orientation
 	x, y, z = base
 	ox, oy, oz = point
 	a = (heading + (math.pi / 2.0)) - math.atan2(oy - y, ox - x)

@@ -143,12 +143,12 @@ def orientationOperator(method):
 	op = method.__name__
 	setattr()
 
-class Orientation(Samplable, collections.abc.Sequence):
+class Orientation():
 	"""A quaternion representation of an orientation whose rotation axis and angle can be distributions."""
-	def __init__(self, w, x, y, z=0):
-		self.orientation = Quaternion(axis=[x, y, z], angle=w)
-		self.coordinates = (w, x, y, z)
-		super().__init__(self.coordinates)
+	def __init__(self, q):
+		if type(q) is not Quaternion:
+			raise RuntimeError(f'cannot instantiate Orientation object with non-quaternion')
+		self.orientation = q
 
 	@property
 	def w(self):
@@ -225,7 +225,6 @@ class Orientation(Samplable, collections.abc.Sequence):
 	def __repr__(self):
 		return repr(self.orientation)
 
-
 class Vector(Samplable, collections.abc.Sequence):
 	"""A 2D vector, whose coordinates can be distributions."""
 	def __init__(self, x, y, z=0):
@@ -275,14 +274,6 @@ class Vector(Samplable, collections.abc.Sequence):
 		dx, dy, dz = other.toVector() - self
 		return math.hypot(dx, dy, dz)
 
-	@scalarOperator
-	def angleTo(self, other):
-		# TODO: Incorrect. Implement orientation class and use quaternion to get direction self needs to go to other 
-		# return normalizeAngle(math.acos(dotProduct(self, other) / norm(self) * norm(other))) - (math.pi / 2)
-		# 
-		dx, dy, dz = other.toVector() - self
-		return normalizeAngle(math.atan2(dy, dx) - (math.pi / 2))
-
 	@vectorOperator
 	def __add__(self, other):
 		return Vector(self[0] + other[0], self[1] + other[1], self[2] + other[2])
@@ -298,6 +289,13 @@ class Vector(Samplable, collections.abc.Sequence):
 	@vectorOperator
 	def __rsub__(self, other):
 		return Vector(other[0] - self[0], other[1] - self[1], self[2] - other[2])
+	
+	@vectorOperator
+	def angleTo(self, other):
+		v = self - other 
+		return Orientation(Quaternion(axis=list(v.coordinates), angle=0))
+		# dx, dy, dz = other.toVector() - self
+		# return normalizeAngle(math.atan2(dy, dx) - (math.pi / 2))
 
 	def __len__(self):
 		return len(self.coordinates)

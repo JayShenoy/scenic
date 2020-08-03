@@ -29,7 +29,7 @@ __all__ = (
 	# Specifiers
 	'With',
 	'At', 'In', 'Beyond', 'VisibleFrom', 'VisibleSpec', 'OffsetBy', 'OffsetAlongSpec',
-	'Facing', 'FacingToward', 'ApparentlyFacing',
+	'Facing', 'FacingToward', 'ApparentlyFacing', 'FacingDirectlyToward', 'FacingAwayFrom',
 	'LeftSpec', 'RightSpec', 'Ahead', 'Behind',
 	'Following',
 	# Constants
@@ -487,6 +487,22 @@ def FacingToward(pos):
 	return Specifier('heading', DelayedArgument({'position'},
 	                                            lambda self: self.position.angleTo(pos)))
 
+def FacingDirectlyToward(pos):
+	"""The 'facing directly toward <vector>' specifier.
+
+	Specifies yaw angle of 'heading', depending on 'position'.
+	"""
+	return NotImplemented
+
+def FacingAwayFrom(pos):
+	""" The 'facing away from <vector>' specifier.
+
+	Specifies 'heading', depending on 'position'.
+	"""
+	pos = toVector(pos, 'specifier "facing away from X" with X not a vector')
+	return Specifier('heading', DelayedArgument({'position'},
+												lambda self: pos.angleTo(self.position)))
+
 def ApparentlyFacing(heading, fromPt=None):
 	"""The 'apparently facing <heading> [from <vector>]' specifier.
 
@@ -557,6 +573,32 @@ def Behind(pos, dist=0):
 	"""
 	return leftSpecHelper('behind', pos, dist, 'height', lambda dist: (0, dist),
 	                      lambda self, dx, dy: Vector(dx, -self.height / 2 - dy))
+
+def Above(pos, dist=0):
+	"""The 'above X [by Y]' polymorphic specifier.
+
+	Specifies 'position', depending on 'height'. 
+
+	Allowed forms:
+		above <oriented point> [by <scalar/vector>] -- optionally specifies 'heading;
+		above <vector> [by <scalar/vector>] -- depends on 'heading'.
+
+	If the 'by <scalar/vector>' is omitted, zero is used.
+	"""
+	return NotImplemented
+
+def Below(pos, dist=0):
+	"""The 'below X [by Y]' polymorphic specifier.
+
+	Specifies 'position', depending on 'height'. 
+
+	Allowed forms:
+		below <oriented point> [by <scalar/vector>] -- optionally specifies 'heading;
+		below <vector> [by <scalar/vector>] -- depends on 'heading'.
+
+	If the 'by <scalar/vector>' is omitted, zero is used.
+	"""
+	return NotImplemented
 
 def leftSpecHelper(syntax, pos, dist, axis, toComponents, makeOffset):
 	extras = set()
