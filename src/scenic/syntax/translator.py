@@ -723,15 +723,15 @@ class TokenTranslator:
 			elif ttype == NAME:		# the interesting case: almost all new syntax falls in here
 				# try to match 3-word language constructs
 				matched = False
-				nextToken = peek(tokens)
-				if nextToken is not None:
-					nextString = nextToken.string
-					if nextString == 'facing': # Hack-y special case for 3-word construct 
-						nextNextToken = next(tokens)
-						print(nextNextToken.string)
+				if tstring == 'facing': # Hack-y special case for 3-word construct 
+					nextToken = peek(tokens)
+					if nextToken is not None:
+						nextString = nextToken.string
+						next(tokens)
+						nextNextToken = peek(tokens)
 						if nextNextToken is not None:
 							nextString = nextToken.string
-							nextNextString = nextToken.string
+							nextNextString = nextNextToken.string
 							threeWords = (tstring, nextString, nextNextString)
 							print(threeWords)
 							if not startOfLine and threeWords in allowedInfixOps: # 3-word Infix Ops 
