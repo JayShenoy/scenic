@@ -151,40 +151,25 @@ class Orientation():
 		self.orientation = q
 
 	@property
-	def w(self):
-		return self.coordinates[0]
+	def w(self): 
+		return self.orientation.elements[0]
 
 	@property
 	def x(self):
-		return self.coordinates[1]
+		return self.orientation.elements[1]
 
 	@property
 	def y(self):
-		return self.coordinates[2]
+		return self.orientation.elements[2]
 
 	@property
 	def z(self):
-		return self.coordinates[3]
+		return self.orientation.elements[3]
 
 	def __mul__(self, other):
 		if type(other) is not Orientation:
 			return NotImplemented
 		return other.orientation * self.orientation
-
-	def __add__(self, other):
-		if type(other) is not Orientation:
-			return NotImplemented
-		return other.orientation + self.orientation
-
-	def __sub__(self, other):
-		if type(other) is not Orientation:
-			return NotImplemented
-		return other.orientation - self.orientation
-
-	def __truediv__(self, other):
-		if type(other) is not Orientation:
-			return NotImplemented
-		return other.orientation / self.orientation
 
 	def __eq__(self, other):
 		if type(other) is not Orientation:
@@ -194,17 +179,11 @@ class Orientation():
 	def __getitem__(self, index):
 		return self.coordinates[index]
 
-	def __len__(self):
-		return len(self.coordinates)
-
 	def rotate_vector(self, v):
 		return self.orientation.rotate(Quaternion(vector=(v))) #TODO: Convert to vector. This returns Quaternion object
 
 	def get_rotation_axis(self):
 		return self.orientation.axis
-
-	def get_rotation_angle_degrees(self):
-		return self.orientation.degrees
 
 	def get_rotation_angle_radians(self):
 		return self.orientation.radians

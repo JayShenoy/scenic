@@ -733,13 +733,10 @@ class TokenTranslator:
 							nextString = nextToken.string
 							nextNextString = nextNextToken.string
 							threeWords = (tstring, nextString, nextNextString)
-							print(threeWords)
-							if not startOfLine and threeWords in allowedInfixOps: # 3-word Infix Ops 
-								injectToken(allowedInfixOps[twoWords])
+							if threeWords in allowedPrefixOps: # 3-word Infix Ops 
+								callFunction(allowedPrefixOps[threeWords])
 								advance() # Consume second word 
 								advance() # Consume third word
-								skip = True
-								matched = True
 				# 3-word constructs don't match; try to match 2-word language constructs
 				if not matched:
 					nextToken = peek(tokens)		# lookahead so we can give 2-word ops precedence
