@@ -9,6 +9,7 @@ import functools
 
 import shapely.geometry
 from pyquaternion import Quaternion 
+from scipy.spatial.transform import Rotation as R
 
 from scenic.core.distributions import (Samplable, Distribution, MethodDistribution,
                                        needsSampling, makeOperatorHandler, distributionMethod)
@@ -177,7 +178,7 @@ class Orientation():
 		return other.orientation == self.orientation
 
 	def __getitem__(self, index):
-		return self.coordinates[index]
+		return self.orientation[index]
 
 	def rotate_vector(self, v):
 		return self.orientation.rotate(Quaternion(vector=(v))) #TODO: Convert to vector. This returns Quaternion object

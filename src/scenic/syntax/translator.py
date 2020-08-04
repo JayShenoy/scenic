@@ -727,7 +727,7 @@ class TokenTranslator:
 					nextToken = peek(tokens)
 					if nextToken is not None:
 						nextString = nextToken.string
-						next(tokens)
+						next(tokens) # Consume second word
 						nextNextToken = peek(tokens)
 						if nextNextToken is not None:
 							nextString = nextToken.string
@@ -735,8 +735,7 @@ class TokenTranslator:
 							threeWords = (tstring, nextString, nextNextString)
 							if threeWords in allowedPrefixOps: # 3-word Infix Ops 
 								callFunction(allowedPrefixOps[threeWords])
-								advance() # Consume second word 
-								advance() # Consume third word
+								advance() # Consume third word 
 				# 3-word constructs don't match; try to match 2-word language constructs
 				if not matched:
 					nextToken = peek(tokens)		# lookahead so we can give 2-word ops precedence
