@@ -557,6 +557,7 @@ class PolygonalRegion(Region):
 
 class PolyhedronRegion(Region):
 	"""Region given by a Polyhedron"""
+	# TODO: @Matthew Implement. 
 	def __init__(self, name=None, polyhedron=None, orientation=None):
 		super().__init__('Polyhedron', orientation=orientation)
 

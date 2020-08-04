@@ -271,10 +271,12 @@ class Vector(Samplable, collections.abc.Sequence):
 	
 	@vectorOperator
 	def angleTo(self, other):
-		v = self - other 
-		return Orientation(Quaternion(axis=list(v.coordinates), angle=0))
-		# dx, dy, dz = other.toVector() - self
-		# return normalizeAngle(math.atan2(dy, dx) - (math.pi / 2))
+		dx, dy, dz = other.toVector() - self
+		return normalizeAngle(math.atan2(dy, dx) - (math.pi / 2))
+
+	@vectorOperator
+	def angleBetween(self, other):
+		return normalizeAngle(math.acos(dotProduct(self,other) / norm(self)*norm(other)) - (math.pi / 2))
 
 	def __len__(self):
 		return len(self.coordinates)
@@ -284,7 +286,6 @@ class Vector(Samplable, collections.abc.Sequence):
 
 	def __repr__(self):
 		return f'({self.x}, {self.y}, {self.z})'
-		# return f'({self.x} @ {self.y} @ {self.z})'
 
 	def __eq__(self, other):
 		if type(other) is not Vector:
@@ -353,3 +354,8 @@ class PolygonalVectorField(VectorField):
 		if self.defaultHeading is not None:
 			return self.defaultHeading
 		raise RuntimeError(f'evaluated PolygonalVectorField at undefined point {pos}')
+
+class PolyhedronVectorField(VectorField):
+	# TODO: @Matthew Implement
+	def __init__(self, name, cells, headingFunction=None, defaultHeading=None):
+		super().__init__(name, self.valueAt)
