@@ -8,6 +8,7 @@ import argparse
 import random
 import os
 import csv
+from pathlib import Path
 
 import scenic.syntax.translator as translator
 from scenic.simulators import SimulationCreationError
@@ -71,11 +72,22 @@ print(f'Scenario constructed in {totalTime:.2f} seconds.')
 
 def logTrajectory(path, index, info, trajectory):
     logname = os.path.join(path, f"simulation-{index}.csv")
-    with open(logname) as file:
-        writer = csv.writer(file, delimiter=' & ')
+    with open(logname, 'w') as file:
+        writer = csv.writer(file, delimiter='&')
         writer.writerow(info)
         for state in trajectory:
             writer.writerow(state)
+
+def prepareLogTrajectory(path_str):
+    path = Path(path_str)
+    if not path.exists():
+        raise ValueError(f"Log output path '{path_str}' should exist")
+    if not path.is_dir():
+        raise ValueError(f"Log output path '{path_str}' should be directory")
+    logDirStr = os.path.join(path_str, time.strftime("%Y%m%d-%H%M%S")) 
+    logDirPath = Path(logDirStr)
+    logDirPath.mkdir(parents=False, exist_ok=False)   
+    return logDirStr
 
 def generateScene():
     startTime = time.time()
@@ -85,7 +97,7 @@ def generateScene():
         print(f'  Generated scene in {iterations} iterations, {totalTime:.4g} seconds.')
     return scene, iterations
 
-def runSimulation(scene, index):
+def runSimulation(scene, index, loggingPath):
     startTime = time.time()
     if args.verbosity >= 1:
         print('  Beginning simulation...')
@@ -98,8 +110,8 @@ def runSimulation(scene, index):
     if args.verbosity >= 1:
         totalTime = time.time() - startTime
         print(f'  Ran simulation in {totalTime:.4g} seconds.')
-    if args.log_trajectory is not None:
-        logTrajectory(args.log_trjectory, index, trajectoryInfo, trajectory)
+    if loggingPath is not None:
+        logTrajectory(loggingPath, index, trajectoryInfo, trajectory)
 
 
 
@@ -107,12 +119,16 @@ def runSimulation(scene, index):
 
 if args.gather_stats is None:   # Generate scenes interactively until killed
     import matplotlib.pyplot as plt
+    if args.log_trajectory is not None:
+        loggingPath = prepareLogTrajectory(args.log_trajectory)
+    else:
+        loggingPath = None
     i = 0
     while True:
         scene, _ = generateScene()
         i += 1
         if args.simulate:
-            runSimulation(scene, i)
+            runSimulation(scene, i, loggingPath)
             if 0 < args.count <= i:
                 break
         else:

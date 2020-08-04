@@ -144,11 +144,13 @@ class CarlaSimulation(simulators.Simulation):
 				raise RuntimeError(f'{carlaActor} has non-planar orientation')
 
 	def stateEncoding(self):
-		return tuple(*(f"obj{i}-position", f"obj{i}-heading", f"obj{i}-speed") for i in len(self.objects))
+		packed_list = tuple((f"obj{i}-position", f"obj{i}-heading", f"obj{i}-speed") for i in range(len(self.objects)))
+		return [item for sublist in packed_list for item in sublist]
 
 	def currentState(self):
 		#TODO ensure that stateEncoding and the creation of state here match.
-		return tuple(*(obj.position, obj.heading, obj.speed) for obj in self.objects)
+		packed_list = tuple((obj.position, obj.heading, obj.speed) for obj in self.objects)
+		return [item for sublist in packed_list for item in sublist]
 
 	def initialState(self):
 		#TODO careful, this is not correct if we have already executed step actions.
