@@ -6,6 +6,8 @@ import sys
 import time
 import argparse
 import random
+import os
+import csv
 
 import scenic.syntax.translator as translator
 from scenic.simulators import SimulationCreationError
@@ -29,6 +31,7 @@ simOpts.add_argument('--time', help='time bound for simulations (default none)',
                      type=int, default=None)
 simOpts.add_argument('--count', help='number of simulations to run (default infinity)',
                      type=int, default=0)
+simOpts.add_argument('--log-trajectory', type=str, help='store trajectory to the following directory', default=None)
 
 # Debugging options
 debugOpts = parser.add_argument_group('debugging options')
@@ -66,6 +69,14 @@ scenario = translator.scenarioFromFile(args.scenario)
 totalTime = time.time() - startTime
 print(f'Scenario constructed in {totalTime:.2f} seconds.')
 
+def logTrajectory(path, index, info, trajectory):
+    logname = os.path.join(path, f"simulation-{index}.csv")
+    with open(logname) as file:
+        writer = csv.writer(file, delimiter=' & ')
+        writer.writerow(info)
+        for state in trajectory:
+            writer.writerow(state)
+
 def generateScene():
     startTime = time.time()
     scene, iterations = scenario.generate(verbosity=args.verbosity)
@@ -74,12 +85,13 @@ def generateScene():
         print(f'  Generated scene in {iterations} iterations, {totalTime:.4g} seconds.')
     return scene, iterations
 
-def runSimulation(scene):
+def runSimulation(scene, index):
     startTime = time.time()
     if args.verbosity >= 1:
         print('  Beginning simulation...')
     try:
-        scene.simulate(maxSteps=args.time, verbosity=args.verbosity)
+        trajectoryInfo = scene.simulator.stateEncoding()
+        trajectory = scene.simulate(maxSteps=args.time, verbosity=args.verbosity)
     except SimulationCreationError as e:
         if args.verbosity >= 1:
             print(f'  Failed to create simulation: {e}')
@@ -87,6 +99,12 @@ def runSimulation(scene):
     if args.verbosity >= 1:
         totalTime = time.time() - startTime
         print(f'  Ran simulation in {totalTime:.4g} seconds.')
+    if args.log_trajectory is not None:
+        logTrajectory(args.log_trjectory, index, trajectoryInfo, trajectory)
+
+
+
+
 
 if args.gather_stats is None:   # Generate scenes interactively until killed
     import matplotlib.pyplot as plt
@@ -95,7 +113,7 @@ if args.gather_stats is None:   # Generate scenes interactively until killed
         scene, _ = generateScene()
         i += 1
         if args.simulate:
-            runSimulation(scene)
+            runSimulation(scene, i)
             if 0 < args.count <= i:
                 break
         else:

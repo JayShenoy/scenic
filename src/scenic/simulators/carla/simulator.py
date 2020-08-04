@@ -143,10 +143,15 @@ class CarlaSimulation(simulators.Simulation):
 			if obj.heading is None:
 				raise RuntimeError(f'{carlaActor} has non-planar orientation')
 
+	def stateEncoding(self):
+		return tuple(*(f"obj{i}-position", f"obj{i}-heading", f"obj{i}-speed") for i in len(self.objects))
+
 	def currentState(self):
-		return tuple(obj.position for obj in self.objects)
+		#TODO ensure that stateEncoding and the creation of state here match.
+		return tuple(*(obj.position, obj.heading, obj.speed) for obj in self.objects)
 
 	def initialState(self):
+		#TODO careful, this is not correct if we have already executed step actions.
 		return self.currentState()
 
 	def step(self, actions):
