@@ -90,8 +90,7 @@ def runSimulation(scene, index):
     if args.verbosity >= 1:
         print('  Beginning simulation...')
     try:
-        trajectoryInfo = scene.simulator.stateEncoding()
-        trajectory = scene.simulate(maxSteps=args.time, verbosity=args.verbosity)
+        trajectory, trajectoryInfo = scene.simulate(maxSteps=args.time, verbosity=args.verbosity)
     except SimulationCreationError as e:
         if args.verbosity >= 1:
             print(f'  Failed to create simulation: {e}')

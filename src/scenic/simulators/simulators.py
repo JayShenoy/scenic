@@ -28,6 +28,7 @@ class Simulator:
             # Run a single simulation
             try:
                 simulation = self.createSimulation(scene)
+                trajectory_info = simulation.stateEncoding()
                 trajectory, terminationReason = simulation.run(maxSteps, verbosity=verbosity)
             except RejectSimulationException as e:
                 if verbosity >= 2:
@@ -38,7 +39,7 @@ class Simulator:
             if verbosity >= 2:
                 print(f'  Simulation {iterations} ended successfully at time step '
                       f'{simulation.currentTime} because of: {terminationReason}')
-            return trajectory
+            return trajectory, trajectory_info
         raise RuntimeError(f'failed to generate valid simulation in {maxIterations} iterations')
 
     def createSimulation(self, scene):
