@@ -5,9 +5,11 @@ from shapely.geometry import LineString
 from scenic.core.regions import regionFromShapelyObject
 from scenic.simulators.domains.driving.network import loadNetwork
 from scenic.simulators.domains.driving.roads import ManeuverType
-loadNetwork('/home/carla_challenge/Downloads/Town03.xodr')
+loadNetwork('/home/carla_challenge/Desktop/Carla/Dynamic-Scenic/CARLA_0.9.9/Unreal/CarlaUE4/Content/Carla/Maps/OpenDrive/Town03.xodr')
 
 from scenic.simulators.carla.model import *
+from scenic.simulators.carla.behaviors import *
+
 simulator = CarlaSimulator('Town03')
 
 MAX_BREAK_THRESHOLD = 1
@@ -55,7 +57,7 @@ def concatenateCenterlines(centerlines=[]):
 centerlines = [startLane.centerline, connectingLane.centerline, endLane.centerline]
 
 ego = Car on startLane.centerline,
-		with blueprint 'vehicle.tesla.model3',
-		with behavior FollowWayPoints(target_speed=25, waypoints=concatenateCenterlines(centerlines))
+		with blueprint 'vehicle.audi.a2',
+		with behavior FollowTrajectoryBehavior(target_speed=15, trajectory=centerlines)
 
 # other = Car at lanes[2].centerline[-1]

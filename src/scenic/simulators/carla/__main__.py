@@ -9,6 +9,7 @@ from scenic.simulators.carla.simulator import CarlaSimulator
 carla_map = 'Town01'
 sc_file_path = 'scripts/CARLA_Scenarios/challenge9.sc'
 
+
 address = '127.0.0.1'
 port = 2000
 

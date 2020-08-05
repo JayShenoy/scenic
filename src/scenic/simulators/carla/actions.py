@@ -259,7 +259,7 @@ class FollowLaneAction(simulators.Action):
 	low level control a vehicle from client side
 	"""
 
-	def __init__(self, throttle, current_steer, past_steer, args_lateral=None, args_longitudinal=None, max_throttle=0.5, max_brake=0.5, max_steering=0.8):
+	def __init__(self, throttle, current_steer, past_steer, args_lateral=None, args_longitudinal=None, max_throttle=0.75, max_brake=0.5, max_steering=0.8):
 		"""
 		Constructor method.
 
@@ -347,7 +347,7 @@ class PIDLongitudinalController():
 	"""
 
 
-	def __init__(self, vehicle, K_P=0.5, K_D=0.1, K_I=0.2, dt=0.1):
+	def __init__(self, vehicle, K_P=0.5, K_D=0.1, K_I=0.7, dt=0.1):
 		"""
 		Constructor method.
 
@@ -390,7 +390,8 @@ class PIDLateralController():
 	"""
 
 	# def __init__(self, vehicle, K_P=0.01, K_D=0.000001, K_I=0.1, dt=0.1):
-	def __init__(self, vehicle, K_P=0.01, K_D=0.01, K_I=0, dt=0.1):
+	# def __init__(self, vehicle, K_P=0.01, K_D=0.01, K_I=0, dt=0.1):
+	def __init__(self, vehicle, K_P=0.3, K_D=0.2, K_I=0, dt=0.1):
 		"""
 		Constructor method. 0.0000005
 

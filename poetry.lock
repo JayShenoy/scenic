@@ -102,6 +102,14 @@ six = "*"
 
 [[package]]
 category = "main"
+description = "Decorators for Humans"
+name = "decorator"
+optional = false
+python-versions = ">=2.6, !=3.0.*, !=3.1.*"
+version = "4.4.2"
+
+[[package]]
+category = "main"
 description = "Distribution utilities"
 name = "distlib"
 optional = true
@@ -123,6 +131,14 @@ name = "dotmap"
 optional = false
 python-versions = "*"
 version = "1.3.17"
+
+[[package]]
+category = "main"
+description = "XPath 1.0/2.0 parsers and selectors for ElementTree and lxml"
+name = "elementpath"
+optional = false
+python-versions = "*"
+version = "1.3.3"
 
 [[package]]
 category = "main"
@@ -203,6 +219,30 @@ version = "8.4.0"
 
 [[package]]
 category = "main"
+description = "Python package for creating and manipulating graphs and networks"
+name = "networkx"
+optional = false
+python-versions = "*"
+version = "2.2"
+
+[package.dependencies]
+decorator = ">=4.3.0"
+
+[package.extras]
+all = ["numpy", "scipy", "pandas", "matplotlib", "pygraphviz", "pydot", "pyyaml", "gdal", "lxml", "nose"]
+gdal = ["gdal"]
+lxml = ["lxml"]
+matplotlib = ["matplotlib"]
+nose = ["nose"]
+numpy = ["numpy"]
+pandas = ["pandas"]
+pydot = ["pydot"]
+pygraphviz = ["pygraphviz"]
+pyyaml = ["pyyaml"]
+scipy = ["scipy"]
+
+[[package]]
+category = "main"
 description = "NumPy is the fundamental package for array computing with Python."
 name = "numpy"
 optional = false
@@ -266,6 +306,34 @@ name = "py"
 optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 version = "1.9.0"
+
+[[package]]
+category = "main"
+description = "pythonic implementation of behaviour trees"
+name = "py-trees"
+optional = false
+python-versions = "*"
+version = "0.8.3"
+
+[package.dependencies]
+pydot = "*"
+setuptools = "*"
+
+[package.extras]
+debs = ["stdeb", "twine"]
+docs = ["sphinx", "sphinx-argparse", "sphinx-rtd-theme"]
+test = ["nose", "pydot", "pytest", "flake8", "yanc", "nose-htmloutput"]
+
+[[package]]
+category = "main"
+description = "Python interface to Graphviz's Dot"
+name = "pydot"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+version = "1.4.1"
+
+[package.dependencies]
+pyparsing = ">=2.1.4"
 
 [[package]]
 category = "main"
@@ -612,13 +680,24 @@ optional = true
 python-versions = "*"
 version = "0.2.5"
 
+[[package]]
+category = "main"
+description = "An XML Schema validator and decoder"
+name = "xmlschema"
+optional = false
+python-versions = "*"
+version = "1.0.18"
+
+[package.dependencies]
+elementpath = ">=1.3.0,<1.4.0"
+
 [extras]
 dev = ["pytest-randomly", "pytest", "sphinx", "sphinx_rtd_theme", "tox", "astor", "pyproj"]
 gpc_triangulation = ["Polygon3"]
 guideways = ["pyproj"]
 
 [metadata]
-content-hash = "45dfb1e8edef25e5d1ea42778edab27c2efbcfd8d20f6c45721754077b435331"
+content-hash = "4c7655c26dc03036f9beacb9cad24e82700814c3b54f336edda1012be2852aed"
 python-versions = "^3.8"
 
 [metadata.files]
@@ -665,6 +744,10 @@ cycler = [
     {file = "cycler-0.10.0-py2.py3-none-any.whl", hash = "sha256:1d8a5ae1ff6c5cf9b93e8811e581232ad8920aeec647c37316ceac982b08cb2d"},
     {file = "cycler-0.10.0.tar.gz", hash = "sha256:cd7b2d1018258d7247a71425e9f26463dfb444d411c39569972f4ce586b0c9d8"},
 ]
+decorator = [
+    {file = "decorator-4.4.2-py2.py3-none-any.whl", hash = "sha256:41fa54c2a0cc4ba648be4fd43cff00aedf5b9465c9bf18d64325bc225f08f760"},
+    {file = "decorator-4.4.2.tar.gz", hash = "sha256:e3a62f0520172440ca0dcc823749319382e377f37f140a0b99ef45fecb84bfe7"},
+]
 distlib = [
     {file = "distlib-0.3.1-py2.py3-none-any.whl", hash = "sha256:8c09de2c67b3e7deef7184574fc060ab8a793e7adbb183d942c389c8b13c52fb"},
     {file = "distlib-0.3.1.zip", hash = "sha256:edf6116872c863e1aa9d5bb7cb5e05a022c519a4594dc703843343a9ddd9bff1"},
@@ -676,6 +759,10 @@ docutils = [
 dotmap = [
     {file = "dotmap-1.3.17-py3-none-any.whl", hash = "sha256:63d4bb47a3332089bb1a5844c9c688440e3cb786c4941d57271e937c19aadaea"},
     {file = "dotmap-1.3.17.tar.gz", hash = "sha256:51b359bd432a031397e7ec11acff379774ecb61bbc08b3d4f1e59863c7584ddd"},
+]
+elementpath = [
+    {file = "elementpath-1.3.3-py2.py3-none-any.whl", hash = "sha256:4b1fc2120d69c126a2d9993ea206c214b4098ded9135318ad382ebfced537619"},
+    {file = "elementpath-1.3.3.tar.gz", hash = "sha256:1738dbcd4d7ac89ac354bc3f7a61c2f4f1a4e439cf43c2c2e4e444fa454268e5"},
 ]
 filelock = [
     {file = "filelock-3.0.12-py3-none-any.whl", hash = "sha256:929b7d63ec5b7d6b71b0fa5ac14e030b3f70b75747cef1b10da9b879fef15836"},
@@ -767,6 +854,9 @@ matplotlib = [
 more-itertools = [
     {file = "more-itertools-8.4.0.tar.gz", hash = "sha256:68c70cc7167bdf5c7c9d8f6954a7837089c6a36bf565383919bb595efb8a17e5"},
     {file = "more_itertools-8.4.0-py3-none-any.whl", hash = "sha256:b78134b2063dd214000685165d81c154522c3ee0a1c0d4d113c80361c234c5a2"},
+]
+networkx = [
+    {file = "networkx-2.2.zip", hash = "sha256:45e56f7ab6fe81652fb4bc9f44faddb0e9025f469f602df14e3b2551c2ea5c8b"},
 ]
 numpy = [
     {file = "numpy-1.19.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:63d971bb211ad3ca37b2adecdd5365f40f3b741a455beecba70fd0dde8b2a4cb"},
@@ -872,6 +962,14 @@ polygon3 = [
 py = [
     {file = "py-1.9.0-py2.py3-none-any.whl", hash = "sha256:366389d1db726cd2fcfc79732e75410e5fe4d31db13692115529d34069a043c2"},
     {file = "py-1.9.0.tar.gz", hash = "sha256:9ca6883ce56b4e8da7e79ac18787889fa5206c79dcc67fb065376cd2fe03f342"},
+]
+py-trees = [
+    {file = "py_trees-0.8.3-py3-none-any.whl", hash = "sha256:4cb2e1b93251ba15e10395f6c24b5f5af55aa0ad38a6aa9a014b4e5270e5d16c"},
+    {file = "py_trees-0.8.3.tar.gz", hash = "sha256:679e0c22d8854759180a9c4f43f8c4c87479d5314206894a230f75869c822c91"},
+]
+pydot = [
+    {file = "pydot-1.4.1-py2.py3-none-any.whl", hash = "sha256:67be714300c78fda5fd52f79ec994039e3f76f074948c67b5ff539b433ad354f"},
+    {file = "pydot-1.4.1.tar.gz", hash = "sha256:d49c9d4dd1913beec2a997f831543c8cbd53e535b1a739e921642fe416235f01"},
 ]
 pygame = [
     {file = "pygame-2.0.0.dev10-cp27-cp27m-macosx_10_9_intel.whl", hash = "sha256:0eca53d0de28f2abebd9bdd6269815e47bdf292c924eef2becdb2e716ac6fe65"},
@@ -1061,4 +1159,8 @@ virtualenv = [
 wcwidth = [
     {file = "wcwidth-0.2.5-py2.py3-none-any.whl", hash = "sha256:beb4802a9cebb9144e99086eff703a642a13d6a0052920003a230f3294bbe784"},
     {file = "wcwidth-0.2.5.tar.gz", hash = "sha256:c4d647b99872929fdb7bdcaa4fbe7f01413ed3d98077df798530e5b04f116c83"},
+]
+xmlschema = [
+    {file = "xmlschema-1.0.18-py2.py3-none-any.whl", hash = "sha256:4082a2053ad23ac0ac5e0d3a09b6c90d309622bcf1c720790c90277cc3a2bc50"},
+    {file = "xmlschema-1.0.18.tar.gz", hash = "sha256:3e831730f9b73de196ff83d86349be720ca2f69ddfe5e47a820a8f7632c7dcc6"},
 ]

@@ -63,13 +63,13 @@ class CarlaSimulation(simulators.Simulation):
 		self.ego = None
 		for obj in self.objects:
 			# Extract blueprint
-			print(obj.blueprint)
+			# print(obj.blueprint)
 			blueprint = self.blueprintLib.find(obj.blueprint)
 
 			# Set up transform
 			loc = utils.scenicToCarlaLocation(obj.position, world=self.world)
 			rot = utils.scenicToCarlaRotation(obj.heading)
-			print(blueprint)
+			# print(blueprint)
 			transform = carla.Transform(loc, rot)
 			
 			# # Create Carla actor

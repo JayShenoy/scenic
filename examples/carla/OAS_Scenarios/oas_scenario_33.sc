@@ -5,12 +5,12 @@ from shapely.geometry import LineString
 from scenic.core.regions import regionFromShapelyObject
 from scenic.simulators.domains.driving.network import loadNetwork
 from scenic.simulators.domains.driving.roads import ManeuverType
-loadNetwork('/home/carla_challenge/Downloads/Town01.xodr')
+loadNetwork('/home/carla_challenge/Downloads/Town10HD.xodr')
 
 from scenic.simulators.carla.model import *
 from scenic.simulators.carla.behaviors import *
 
-simulator = CarlaSimulator('Town01')
+simulator = CarlaSimulator('Town10HD')
 
 MAX_BREAK_THRESHOLD = 1
 TERMINATE_TIME = 20
