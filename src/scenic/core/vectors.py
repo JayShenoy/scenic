@@ -1,5 +1,7 @@
 """Scenic vectors and vector fields."""
 
+from __future__ import annotations
+
 import math
 from math import sin, cos
 import random
@@ -10,7 +12,8 @@ import functools
 import shapely.geometry
 
 from scenic.core.distributions import (Samplable, Distribution, MethodDistribution,
-                                       needsSampling, makeOperatorHandler, distributionMethod)
+    needsSampling, makeOperatorHandler, distributionMethod, distributionFunction,
+	RejectionException)
 from scenic.core.lazy_eval import valueInContext, needsLazyEvaluation, makeDelayedFunctionCall
 import scenic.core.utils as utils
 from scenic.core.geometry import normalizeAngle
@@ -220,6 +223,17 @@ class Vector(Samplable, collections.abc.Sequence):
 	def __rsub__(self, other):
 		return Vector(other[0] - self[0], other[1] - self[1])
 
+	@vectorOperator
+	def __mul__(self, other):
+		return Vector(*(coord*other for coord in self.coordinates))
+
+	def __rmul__(self, other):
+		return self.__mul__(other)
+
+	@vectorOperator
+	def __truediv__(self, other):
+		return Vector(*(coord/other for coord in self.coordinates))
+
 	def __len__(self):
 		return len(self.coordinates)
 
@@ -244,6 +258,11 @@ class OrientedVector(Vector):
 		super().__init__(x, y)
 		self.heading = heading
 
+	@staticmethod
+	@distributionFunction
+	def make(position, heading) -> OrientedVector:
+		return OrientedVector(*position, heading)
+
 	def toHeading(self):
 		return self.heading
 
@@ -257,21 +276,36 @@ class OrientedVector(Vector):
 		return hash((self.coordinates, self.heading))
 
 class VectorField:
-	def __init__(self, name, value):
+	def __init__(self, name, value, minSteps=4, defaultStepSize=5):
 		self.name = name
 		self.value = value
 		self.valueType = float
+		self.minSteps = minSteps	# minimum number of 'follow' steps, if not specified
+		self.defaultStepSize = defaultStepSize
 
 	@distributionMethod
-	def __getitem__(self, pos):
+	def __getitem__(self, pos) -> float:
 		return self.value(pos)
 
 	@vectorDistributionMethod
-	def followFrom(self, pos, dist, steps=4):
+	def followFrom(self, pos, dist, steps=None, stepSize=None):
+		if steps is None:
+			steps = self.minSteps
+			stepSize = self.defaultStepSize if stepSize is None else stepSize
+			if stepSize is not None:
+				steps = max(steps, math.ceil(dist / stepSize))
+
 		step = dist / steps
 		for i in range(steps):
 			pos = pos.offsetRadially(step, self[pos])
 		return pos
+
+	@staticmethod
+	def forUnionOf(regions):
+		if any(reg.orientation for reg in regions):
+			return PiecewiseVectorField('Union', regions)
+		else:
+			return None
 
 	def __str__(self):
 		return f'<{type(self).__name__} {self.name}>'
@@ -295,4 +329,18 @@ class PolygonalVectorField(VectorField):
 				return self.headingFunction(pos) if heading is None else heading
 		if self.defaultHeading is not None:
 			return self.defaultHeading
-		raise RuntimeError(f'evaluated PolygonalVectorField at undefined point {pos}')
+		raise RejectionException(f'evaluated PolygonalVectorField at undefined point')
+
+class PiecewiseVectorField(VectorField):
+	def __init__(self, name, regions, defaultHeading=None):
+		self.regions = tuple(regions)
+		self.defaultHeading = defaultHeading
+		super().__init__(name, self.valueAt)
+
+	def valueAt(self, point):
+		for region in self.regions:
+			if region.containsPoint(point) and region.orientation:
+				return region.orientation[point]
+		if self.defaultHeading is not None:
+			return self.defaultHeading
+		raise RejectionException(f'evaluated PiecewiseVectorField at undefined point')

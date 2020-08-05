@@ -71,11 +71,12 @@ from scenic.core.distributions import (Samplable, RejectionException, Distributi
 from scenic.core.type_support import (isA, toType, toTypes, toScalar, toHeading, toVector,
 									  evaluateRequiringEqualTypes, underlyingType,
 									  canCoerce, coerce)
-from scenic.core.geometry import RotatedRectangle, normalizeAngle, apparentHeadingAtPoint
+from scenic.core.geometry import normalizeAngle, apparentHeadingAtPoint
 from scenic.core.object_types import Constructible
 from scenic.core.specifiers import Specifier
 from scenic.core.lazy_eval import DelayedArgument, needsLazyEvaluation
 from scenic.core.utils import RuntimeParseError
+from scenic.core.vectors import OrientedVector
 from scenic.core.external_params import ExternalParameter
 from scenic.simulators.simulators import RejectSimulationException, EndSimulationAction
 
@@ -144,6 +145,8 @@ def registerObject(obj):
 		allObjects.append(obj)
 	elif evaluatingRequirement:
 		raise RuntimeParseError('tried to create an object inside a requirement')
+	elif currentSimulation is not None:
+		raise InvalidScenarioError('tried to create an object inside a behavior')
 
 # External parameter creation
 
@@ -180,14 +183,18 @@ def beginSimulation(sim):
 	egoObject = sim.scene.egoObject
 
 	# rebind globals that could be referenced by behaviors to their sampled values
-	for modName, (originalNS, sampledNS) in sim.scene.behaviorNamespaces.items():
-		originalNS.clear()
-		originalNS.update(sampledNS)
+	for modName, (namespace, sampledNS, originalNS) in sim.scene.behaviorNamespaces.items():
+		namespace.clear()
+		namespace.update(sampledNS)
 
-def endSimulation():
+def endSimulation(sim):
 	global currentSimulation, egoObject
 	currentSimulation = None
 	egoObject = None
+
+	for modName, (namespace, sampledNS, originalNS) in sim.scene.behaviorNamespaces.items():
+		namespace.clear()
+		namespace.update(originalNS)
 
 def simulationInProgress():
 	return currentSimulation is not None
@@ -285,8 +292,8 @@ class Behavior(Samplable):
 			sig.bind(None, *args, **kwargs)
 		except TypeError as e:
 			raise RuntimeParseError(str(e)) from e
-		self.args = args
-		self.kwargs = kwargs
+		self.args = tuple(toDistribution(arg) for arg in args)
+		self.kwargs = { name: toDistribution(arg) for name, arg in kwargs.items() }
 		super().__init__(itertools.chain(self.args, self.kwargs.values()))
 
 		self.runningIterator = None
@@ -324,7 +331,7 @@ class Behavior(Samplable):
 		yield from sub.runningIterator
 
 	def __str__(self):
-		return f'behavior {self.__name__}'
+		return f'behavior {self.__class__.__name__}'
 
 behaviorIndicator = '__Scenic_behavior'
 
@@ -526,8 +533,7 @@ def mutate(*objects):		# TODO update syntax
 
 def Visible(region):
 	"""The 'visible <region>' operator."""
-	if not isinstance(region, Region):
-		raise RuntimeParseError('"visible X" with X not a Region')
+	region = toType(region, Region, '"visible X" with X not a Region')
 	return region.intersect(ego().visibleRegion)
 
 # front of <object>, etc.
@@ -729,9 +735,10 @@ def alwaysProvidesOrientation(region):
 	elif (isinstance(region, Options)
 	      and all(alwaysProvidesOrientation(opt) for opt in region.options)):
 		return True
-	else:	# TODO improve somehow?
+	else:	# TODO improve somehow!
 		try:
-			return region.sample().orientation is not None
+			sample = region.sample()
+			return sample.orientation is not None or sample is nowhere
 		except RejectionException:
 			return False
 
@@ -900,7 +907,7 @@ def leftSpecHelper(syntax, pos, dist, axis, toComponents, makeOffset):
 	else:
 		raise RuntimeParseError(f'"{syntax} X by D" with D not a number or vector')
 	if isinstance(pos, OrientedPoint):		# TODO too strict?
-		val = lambda self: pos.relativePosition(makeOffset(self, dx, dy))
+		val = lambda self: pos.relativize(makeOffset(self, dx, dy))
 		new = DelayedArgument({axis}, val)
 		extras.add('heading')
 	else:
@@ -929,7 +936,7 @@ def Following(field, dist, fromPt=None):
 	dist = toScalar(dist, '"following F for D" with D not a number')
 	pos = field.followFrom(fromPt, dist)
 	heading = field[pos]
-	val = OrientedPoint(position=pos, heading=heading)
+	val = OrientedVector.make(pos, heading)
 	return Specifier('position', val, optionals={'heading'})
 
 ### Exceptions

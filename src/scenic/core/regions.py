@@ -8,6 +8,7 @@ import numpy
 import scipy.spatial
 import shapely.geometry
 import shapely.ops
+import shapely.prepared
 
 from scenic.core.distributions import (Samplable, RejectionException, needsSampling,
                                        distributionMethod)
@@ -17,7 +18,7 @@ from scenic.core.geometry import RotatedRectangle
 from scenic.core.geometry import sin, cos, hypot, findMinMax, pointIsInCone, averageVectors
 from scenic.core.geometry import headingOfSegment, triangulatePolygon, plotPolygon, polygonUnion
 from scenic.core.type_support import toVector
-from scenic.core.utils import cached, areEquivalent
+from scenic.core.utils import cached, cached_property, areEquivalent
 
 def toPolygon(thing):
 	if needsSampling(thing):
@@ -50,6 +51,13 @@ class PointInRegionDistribution(VectorDistribution):
 
 	def sampleGiven(self, value):
 		return value[self.region].uniformPointInner()
+
+	@property
+	def heading(self):
+		if self.region.orientation is not None:
+			return self.region.orientation[self]
+		else:
+			return 0
 
 	def __str__(self):
 		return f'PointIn({self.region})'
@@ -187,7 +195,7 @@ class EmptyRegion(Region):
 	def distanceTo(self, point):
 		return float('inf')
 
-	def show(self, plt, style=None):
+	def show(self, plt, style=None, **kwargs):
 		pass
 
 	def __eq__(self, other):
@@ -205,10 +213,13 @@ class CircularRegion(Region):
 		self.center = center.toVector()
 		self.radius = radius
 		self.circumcircle = (self.center, self.radius)
+		self.resolution = resolution
 
-		if not (needsSampling(self.center) or needsSampling(self.radius)):
-			ctr = shapely.geometry.Point(self.center)
-			self.polygon = ctr.buffer(self.radius, resolution=resolution)
+	@cached_property
+	def polygon(self):
+		assert not (needsSampling(self.center) or needsSampling(self.radius))
+		ctr = shapely.geometry.Point(self.center)
+		return ctr.buffer(self.radius, resolution=self.resolution)
 
 	def sampleGiven(self, value):
 		return CircularRegion(value[self.center], value[self.radius])
@@ -248,27 +259,32 @@ class CircularRegion(Region):
 
 class SectorRegion(Region):
 	def __init__(self, center, radius, heading, angle, resolution=32):
-		super().__init__('Sector', center, radius, heading, angle)
 		self.center = center.toVector()
 		self.radius = radius
 		self.heading = heading
 		self.angle = angle
+		super().__init__('Sector', self.center, radius, heading, angle)
 		r = (radius / 2) * cos(angle / 2)
 		self.circumcircle = (self.center.offsetRadially(r, heading), r)
+		self.resolution = resolution
 
-		if not any(needsSampling(x) for x in (self.center, radius, heading, angle)):
-			ctr = shapely.geometry.Point(self.center)
-			circle = ctr.buffer(self.radius, resolution=resolution)
-			if angle >= math.tau - 0.001:
-				self.polygon = circle
-			else:
-				mask = shapely.geometry.Polygon([
-				    self.center,
-				    self.center.offsetRadially(radius, heading + angle/2),
-				    self.center.offsetRadially(2*radius, heading),
-				    self.center.offsetRadially(radius, heading - angle/2)
-				])
-				self.polygon = circle & mask
+	@cached_property
+	def polygon(self):
+		center, radius = self.center, self.radius
+		ctr = shapely.geometry.Point(center)
+		circle = ctr.buffer(radius, resolution=self.resolution)
+		if self.angle >= math.tau - 0.001:
+			return circle
+		else:
+			heading = self.heading
+			half_angle = self.angle / 2
+			mask = shapely.geometry.Polygon([
+			    center,
+			    center.offsetRadially(radius, heading + half_angle),
+			    center.offsetRadially(2*radius, heading),
+			    center.offsetRadially(radius, heading - half_angle)
+			])
+			return circle & mask
 
 	def sampleGiven(self, value):
 		return SectorRegion(value[self.center], value[self.radius],
@@ -413,7 +429,7 @@ class PolylineRegion(Region):
 				raise RuntimeError('LineString has fewer than 2 points')
 			last = Vector(*points[0][:2])
 			for point in points[1:]:
-				point = Vector(*point[:2])
+				point = point[:2]
 				segments.append((last, point))
 				last = point
 			return segments
@@ -509,8 +525,9 @@ class PolylineRegion(Region):
 		# TODO optimize?
 		for segment, cumLen in zip(self.segments, self.cumulativeLengths):
 			if dist <= cumLen:
-				return segment
-		return segment 		# just in case we get here due to rounding error
+				break
+		# FYI, could also get here if loop runs to completion due to rounding error
+		return (Vector(*segment[0]), Vector(*segment[1]))
 
 	def pointAlongBy(self, distance, normalized=False):
 		pt = self.lineString.interpolate(distance, normalized=normalized)
@@ -643,30 +660,41 @@ class PolygonalRegion(Region):
 		if not poly:
 			return super().union(other, triedReversed)
 		union = polygonUnion((self.polygons, poly), buf=buf)
-		return PolygonalRegion(polygon=union)
+		orientation = VectorField.forUnionOf((self, other))
+		return PolygonalRegion(polygon=union, orientation=orientation)
 
 	@staticmethod
 	def unionAll(regions, buf=0):
-		polys = []
+		regs, polys = [], []
 		for reg in regions:
 			if reg != nowhere:
+				regs.append(reg)
 				polys.append(toPolygon(reg))
 		if not polys:
 			return nowhere
 		if any(not poly for poly in polys):
 			raise RuntimeError(f'cannot take union of regions {regions}')
 		union = polygonUnion(polys, buf=buf)
-		return PolygonalRegion(polygon=union)
+		orientation = VectorField.forUnionOf(regs)
+		return PolygonalRegion(polygon=union, orientation=orientation)
+
+	@property
+	def boundary(self):
+		return PolylineRegion(polyline=self.polygons.boundary)
+
+	@cached_property
+	def prepared(self):
+		return shapely.prepared.prep(self.polygons)
 
 	def containsPoint(self, point):
-		return self.polygons.intersects(shapely.geometry.Point(point))
+		return self.prepared.intersects(shapely.geometry.Point(point))
 
 	def containsObject(self, obj):
 		objPoly = obj.polygon
 		if objPoly is None:
 			raise RuntimeError('tried to test containment of symbolic Object!')
 		# TODO improve boundary handling?
-		return self.polygons.contains(objPoly)
+		return self.prepared.contains(objPoly)
 
 	def containsRegion(self, other, tolerance=0):
 		poly = toPolygon(other)
@@ -761,6 +789,7 @@ class PointSetRegion(Region):
 		        and other.points == self.points
 		        and other.orientation == self.orientation)
 
+	@cached
 	def __hash__(self):
 		return hash((self.name, self.points, self.orientation))
 

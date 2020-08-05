@@ -215,7 +215,7 @@ class LinearElement(NetworkElement):
     @distributionFunction
     def flowFrom(self, point: Vectorlike, distance: float,
                  steps: Union[int, None] = None,
-                 stepSize: Union[float, None] = None) -> Vector:
+                 stepSize: Union[float, None] = 5) -> Vector:
         """Advance a point along this element by a given distance.
 
         Equivalent to 'follow element.orientation from point for distance', but
@@ -224,11 +224,8 @@ class LinearElement(NetworkElement):
         the 'steps' and 'stepSize' parameters if they can compute the flow
         exactly.
         """
-        if steps is None:
-            if stepSize is None:
-                stepSize = 5
-            steps = min(4, int((distance / stepSize) + 1))
-        return self.orientation.followFrom(toVector(point), distance, steps=steps)
+        return self.orientation.followFrom(toVector(point), distance,
+                                           steps=steps, stepSize=None)
 
 class ContainsCenterline:
     """Mixin which asserts that the centerline is contained in the polygon."""
@@ -473,6 +470,7 @@ class Intersection(NetworkElement):
         super().__attrs_post_init__()
         for maneuver in self.maneuvers:
             assert maneuver.connectingLane, maneuver
+            assert self.containsRegion(maneuver.connectingLane, tolerance=0.5)
 
     @property
     def is3Way(self):
@@ -509,12 +507,6 @@ class Intersection(NetworkElement):
 class Network:
     """A road network."""
 
-    #: Version number for the road network format. Should be incremented
-    #: whenever attributes of `Network`, `NetworkElement`, etc. are changed,
-    #: so that cached networks will be properly regenerated (rather than being
-    #: unpickled in an inconsistent state and causing errors later).
-    formatVersion = 2
-
     elements: Dict[str, NetworkElement]     # indexed by unique ID
 
     # TODO change these to frozensets once everything is hashable?
@@ -548,7 +540,7 @@ class Network:
     roadDirection: VectorField = None
 
     def __attrs_post_init__(self):
-        self.formatVersion = self.formatVersion     # copy class var to instance
+        self.formatVersion = self.currentFormatVersion()
         for uid, elem in self.elements.items():
             assert elem.uid == uid
 
@@ -591,6 +583,17 @@ class Network:
     pickledExt = '.snet'
 
     @classmethod
+    def currentFormatVersion(cls):
+        """Version number for the road network format.
+
+        Should be incremented whenever attributes of `Network`, `NetworkElement`, etc.
+        or the underlying Regions are changed, so that cached networks will be properly
+        regenerated (rather than being unpickled in an inconsistent state and causing
+        errors later).
+        """
+        return 3
+
+    @classmethod
     def fromFile(cls, path, useCache=True, writeCache=True, **kwargs):
         path = pathlib.Path(path)
         ext = path.suffix
@@ -631,7 +634,7 @@ class Network:
         with bz2.open(path, 'rb') as f:
             network = pickle.load(f)
         version = getattr(network, 'formatVersion', None)
-        if version != cls.formatVersion:
+        if version != cls.currentFormatVersion():
             raise pickle.UnpicklingError(f'{cls.pickledExt} file is too old; '
                                          'regenerate it from the original map')
         # Reconnect links between network elements
@@ -654,9 +657,9 @@ class Network:
         path = pathlib.Path(path)
         if not path.suffix:
             path = path.with_suffix(self.pickledExt)
+        data = pickle.dumps(self)
+        data = pickletools.optimize(data)
         with bz2.open(path, 'wb') as f:
-            data = pickle.dumps(self)
-            data = pickletools.optimize(data)
             f.write(data)
 
     @distributionFunction
@@ -750,6 +753,11 @@ class Network:
         for lane in self.lanes:     # draw centerlines of all lanes (including connecting)
             lane.centerline.show(plt, style=':', color='#A0A0A0')
         self.intersectionRegion.show(plt, style='g')
+        # for intersection in self.intersections:
+        #     for i, lane in enumerate(intersection.incomingLanes):
+        #         x, y = lane.centerline[-1]
+        #         plt.plot([x], [y], '*b')
+        #         plt.annotate(str(i), (x, y))
 
 ## FOR LATER
 

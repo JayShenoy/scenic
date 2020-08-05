@@ -11,9 +11,8 @@ import warnings
 import numpy
 import scipy
 
-from scenic.core.lazy_eval import (LazilyEvaluable, DelayedArgument,
-                                   requiredProperties, needsLazyEvaluation, valueInContext,
-                                   makeDelayedFunctionCall)
+from scenic.core.lazy_eval import (LazilyEvaluable,
+    requiredProperties, needsLazyEvaluation, valueInContext, makeDelayedFunctionCall)
 from scenic.core.utils import argsToString, areEquivalent, RuntimeParseError, cached, sqrt2
 
 ## Misc
@@ -376,10 +375,12 @@ class StarredDistribution(Distribution):
 
 class MethodDistribution(Distribution):
 	"""Distribution resulting from passing distributions to a method of a fixed object"""
-	def __init__(self, method, obj, args, kwargs):
+	def __init__(self, method, obj, args, kwargs, valueType=None):
 		args = tuple(toDistribution(arg) for arg in args)
 		kwargs = { name: toDistribution(arg) for name, arg in kwargs.items() }
-		super().__init__(*args, *kwargs.values())
+		if valueType is None:
+			valueType = typing.get_type_hints(method).get('return')
+		super().__init__(*args, *kwargs.values(), valueType=valueType)
 		self.method = method
 		self.object = obj
 		self.arguments = args

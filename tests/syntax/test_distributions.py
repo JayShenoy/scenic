@@ -4,7 +4,7 @@ import math
 import random
 
 from scenic.syntax.translator import InterpreterParseError, InvalidScenarioError
-from tests.utils import compileScenic, sampleEgo, sampleParamP
+from tests.utils import compileScenic, sampleScene, sampleEgo, sampleParamP
 
 ## Utilities
 
@@ -67,18 +67,18 @@ def test_uniform_discrete_lazy():
     assert any(h == 1.2 for h in hs)
     assert any(h == pytest.approx(1) for h in hs)
 
-def test_options():
-    for name in ('Options', 'Discrete'):
-        scenario = compileScenic(f'ego = Object at {name}({{0: 1, 1: 9}}) @ 0')
-        xs = [sampleEgo(scenario).position.x for i in range(400)]
-        assert all(x == 0 or x == 1 for x in xs)
-        assert sum(xs) >= 300
+@pytest.mark.parametrize('dist', ('Options', 'Discrete'))
+def test_options(dist):
+    scenario = compileScenic(f'ego = Object at {dist}({{0: 1, 1: 9}}) @ 0')
+    xs = [sampleEgo(scenario).position.x for i in range(200)]
+    assert all(x == 0 or x == 1 for x in xs)
+    assert 145 <= sum(xs) < 200
 
 def test_options_lazy():
     scenario = lazyTestScenario('Options({0: 1, x: 9})')
-    hs = [sampleEgo(scenario).heading for i in range(400)]
+    hs = [sampleEgo(scenario).heading for i in range(200)]
     assert all(h == 0 or h == pytest.approx(1) for h in hs)
-    assert sum(hs) >= 300
+    assert 145 <= sum(hs) < 200
 
 ## Functions, methods, attributes, operators
 
@@ -270,6 +270,7 @@ def test_namedtuple():
 
 ## Reproducibility
 
+@pytest.mark.slow
 def test_reproducibility():
     scenario = compileScenic(
         'ego = Object\n'
@@ -333,3 +334,15 @@ def test_inside_delayed_argument():
     assert any(h == 1.2 for h in hs)
     assert any(h == pytest.approx(0) for h in hs)
     assert any(h == pytest.approx(2) for h in hs)
+
+## Typechecking
+
+def test_object_expression():
+    scenario = compileScenic("""
+        v = Uniform((Object at (-2,-1) @ 0), Object at (1,2) @ 5).position.x
+        ego = Object facing v, at 0 @ 10
+        require abs(v) > 1.5
+    """)
+    for i in range(3):
+        scene = sampleScene(scenario, maxIterations=50)
+        assert len(scene.objects) == 3

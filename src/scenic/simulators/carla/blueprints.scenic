@@ -2,8 +2,8 @@
 
 ## Vehicle blueprints
 
-carModels = {# speed = 10
-      'vehicle.audi.a2', # K_P=0.3, K_D=0.2, K_I=0
+carModels = {# for speed = 10
+      'vehicle.audi.a2', # Lateral PID:  K_P=0.3, K_D=0.2, K_I=0
       'vehicle.audi.etron', # K_P=0.3, K_D=0.2, K_I=0
       'vehicle.audi.tt',
       'vehicle.bmw.grandtourer',

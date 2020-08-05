@@ -16,6 +16,7 @@ from collections import defaultdict
 from scenic.core.regions import PolygonalRegion, PolylineRegion
 from scenic.core.geometry import (polygonUnion, cleanPolygon, cleanChain, plotPolygon,
                                   averageVectors)
+from scenic.core.vectors import Vector
 from scenic.simulators.domains.driving import roads as roadDomain
 
 # Lane types on which cars can appear.
@@ -193,7 +194,8 @@ class Lane():
         assert self.width[ind][1] <= s, 'No matching width entry found.'
         w_poly, s_off = self.width[ind]
         w = w_poly.eval_at(s - s_off)
-        assert w >= 0, 'Negative width!'
+        if w < 0:
+            raise RuntimeError('OpenDRIVE lane has negative width')
         return w
 
 
@@ -885,12 +887,13 @@ class Road:
             leftEdge = backwardGroup.rightEdge
         else:
             leftEdge = forwardGroup.leftEdge
+        centerline = PolylineRegion(tuple(pt[:2] for pt in self.ref_line_points))
         road = roadDomain.Road(
             name=self.name,
             uid=f'road{self.id_}',      # need prefix to prevent collisions with intersections
             id=self.id_,
             polygon=self.drivable_region,
-            centerline=PolylineRegion(self.ref_line_points),
+            centerline=centerline,
             leftEdge=leftEdge,
             rightEdge=rightEdge,
             lanes=lanes,
@@ -1431,7 +1434,8 @@ class RoadMap:
                         maneuver = roadDomain.Maneuver(
                             startLane=fromLane.lane,
                             connectingLane=toLane.lane,
-                            endLane=outgoingLane
+                            endLane=outgoingLane,
+                            intersection=None   # will be patched once the Intersection is created
                         )
                         maneuversForLane[fromLane.lane].append(maneuver)
 
@@ -1442,15 +1446,29 @@ class RoadMap:
                 lane.maneuvers = tuple(maneuvers)
                 allManeuvers.extend(maneuvers)
 
+            # Order connected roads and lanes by adjacency
+            def cyclicOrder(elements, contactStart=None):
+                points = []
+                for element in elements:
+                    if contactStart is None:
+                        old = self.roads[element.id]
+                        assert old.predecessor == jid or old.successor == jid
+                        contactStart = (old.predecessor == jid)
+                    point = element.centerline[0 if contactStart else -1]
+                    points.append(point)
+                centroid = sum(points, Vector(0, 0)) / len(points)
+                pairs = sorted(zip(elements, points), key=lambda pair: centroid.angleTo(pair[1]))
+                return tuple(elem for elem, pt in pairs)
+
             # Create intersection
             intersection = roadDomain.Intersection(
                 polygon=junction.poly,
                 name=junction.name,
                 uid=f'intersection{jid}',   # need prefix to prevent collisions with roads
                 id=jid,
-                roads=tuple(allRoads),
-                incomingLanes=tuple(allIncomingLanes),
-                outgoingLanes=tuple(allOutgoingLanes),
+                roads=cyclicOrder(allRoads),
+                incomingLanes=cyclicOrder(allIncomingLanes, contactStart=False),
+                outgoingLanes=cyclicOrder(allOutgoingLanes, contactStart=True),
                 maneuvers=tuple(allManeuvers),
                 crossings=(),       # TODO add these
             )

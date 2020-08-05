@@ -51,7 +51,7 @@ from ast import NamedExpr, Yield, YieldFrom, FunctionDef, Attribute, Constant, A
 from ast import Return, Raise, If, UnaryOp, Not, ClassDef, Nonlocal, Global, Compare, Is, Try
 from ast import Break, Continue
 
-from scenic.core.distributions import Samplable, needsSampling
+from scenic.core.distributions import Samplable, needsSampling, toDistribution
 from scenic.core.lazy_eval import needsLazyEvaluation
 from scenic.core.workspaces import Workspace
 from scenic.simulators.simulators import Simulator
@@ -524,6 +524,16 @@ class ScenicLoader(importlib.abc.InspectLoader):
 		module._source = source
 		module._pythonSource = pythonSource
 
+		# If we're in the process of compiling another Scenic module, inherit
+		# objects, parameters, etc. from this one
+		if veneer.isActive():
+			veneer.allObjects.extend(module._objects)
+			veneer.globalParameters.update(module._params)
+			veneer.externalParameters.extend(module._externalParams)
+			veneer.inheritedReqs.extend(module._requirements)
+			veneer.behaviors.extend(module._behaviors)
+			veneer.monitors.extend(module._monitors)
+
 	def is_package(self, fullname):
 		return False
 
@@ -539,24 +549,6 @@ class ScenicLoader(importlib.abc.InspectLoader):
 
 # register the meta path finder
 sys.meta_path.insert(0, ScenicMetaFinder())
-
-## Post-import hook to inherit objects, etc. from imported Scenic modules
-
-def hooked_import(*args, **kwargs):
-	"""Version of __import__ hooked by Scenic to capture Scenic modules."""
-	module = original_import(*args, **kwargs)
-	if getattr(module, '_isScenicModule', False):
-		if veneer.isActive():
-			veneer.allObjects.extend(module._objects)
-			veneer.globalParameters.update(module._params)
-			veneer.externalParameters.extend(module._externalParams)
-			veneer.inheritedReqs.extend(module._requirements)
-			veneer.behaviors.extend(module._behaviors)
-			veneer.monitors.extend(module._monitors)
-	return module
-
-original_import = builtins.__import__
-builtins.__import__ = hooked_import
 
 ## Miscellaneous utilities
 
@@ -1806,13 +1798,24 @@ def storeScenarioStateIn(namespace, requirementSyntax, filename):
 	# Gather all global namespaces which could be referred to by behaviors;
 	# we'll need to rebind any sampled values in them at runtime
 	behaviorNamespaces = {}
+	def registerNamespace(modName, ns):
+		if modName not in behaviorNamespaces:
+			behaviorNamespaces[modName] = ns
+		else:
+			assert behaviorNamespaces[modName] is ns
+		for name, value in ns.items():
+			if isinstance(value, types.ModuleType) and getattr(value, '_isScenicModule', False):
+				registerNamespace(value.__name__, value.__dict__)
+			else:
+				# Convert values requiring sampling to Distributions
+				dval = toDistribution(value)
+				if dval is not value:
+					ns[name] = dval
 	for behavior in veneer.behaviors:
 		modName = behavior.__module__
 		globalNamespace = behavior.makeGenerator.__globals__
-		if modName not in behaviorNamespaces:
-			behaviorNamespaces[modName] = globalNamespace
-		else:
-			assert behaviorNamespaces[modName] is globalNamespace
+		registerNamespace(modName, globalNamespace)
+
 	namespace['_behaviorNamespaces'] = behaviorNamespaces
 
 def constructScenarioFrom(namespace):
