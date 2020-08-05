@@ -451,3 +451,4 @@ class Object(OrientedPoint, RotatedRectangle):
 		x, y = zip(*triangle)
 		plt.fill(x, y, "w")
 		plt.plot(x + (x[0],), y + (y[0],), color="k", linewidth=1)
+

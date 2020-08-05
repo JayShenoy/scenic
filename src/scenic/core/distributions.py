@@ -5,14 +5,14 @@ import itertools
 import functools
 import random
 import math
+import typing
 import warnings
 
 import numpy
 import scipy
 
-from scenic.core.lazy_eval import (LazilyEvaluable, DelayedArgument,
-                                   requiredProperties, needsLazyEvaluation, valueInContext,
-                                   makeDelayedFunctionCall)
+from scenic.core.lazy_eval import (LazilyEvaluable,
+    requiredProperties, needsLazyEvaluation, valueInContext, makeDelayedFunctionCall)
 from scenic.core.utils import argsToString, areEquivalent, RuntimeParseError, cached, sqrt2
 
 ## Misc
@@ -38,6 +38,15 @@ def underlyingFunction(thing):
 	"""Original function underlying a distribution wrapper."""
 	return getattr(thing, '__wrapped__', thing)
 
+def canUnpackDistributions(func):
+	"""Whether the function supports iterable unpacking of distributions."""
+	return getattr(func, '_canUnpackDistributions', False)
+
+def unpacksDistributions(func):
+	"""Decorator indicating the function supports iterable unpacking of distributions."""
+	func._canUnpackDistributions = True
+	return func
+
 class RejectionException(Exception):
 	"""Exception used to signal that the sample currently being generated must be rejected."""
 	pass
@@ -47,9 +56,16 @@ class RejectionException(Exception):
 class DefaultIdentityDict(dict):
 	"""Dictionary which is the identity map by default."""
 	def __getitem__(self, key):
-		if not isinstance(key, Samplable):		# to allow non-hashable objects
+		try:
+			return super().__getitem__(key)
+		except TypeError:	# to allow non-hashable objects
 			return key
-		return super().__getitem__(key)
+
+	def __contains__(self, key):
+		try:
+			return super().__contains__(key)
+		except TypeError:	# to allow non-hashable objects
+			return True
 
 	def __missing__(self, key):
 		return key
@@ -83,7 +99,7 @@ class Samplable(LazilyEvaluable):
 		for q in quantities:
 			if q not in subsamples:
 				subsamples[q] = q.sample(subsamples) if isinstance(q, Samplable) else q
-		return { q: subsamples[q] for q in quantities }
+		return subsamples
 
 	def sample(self, subsamples=None):
 		"""Sample this value, optionally given some values already sampled."""
@@ -125,7 +141,7 @@ class Samplable(LazilyEvaluable):
 class Distribution(Samplable):
 	"""Abstract class for distributions."""
 
-	defaultValueType = float
+	defaultValueType = object
 
 	def __init__(self, *dependencies, valueType=None):
 		super().__init__(dependencies)
@@ -166,6 +182,9 @@ class Distribution(Samplable):
 		if name.startswith('__') and name.endswith('__'):	# ignore special attributes
 			return super().__getattr__(name)
 		return AttributeDistribution(name, self)
+
+	def __iter__(self):
+		raise TypeError(f'distribution {self} is not iterable')
 
 ## Derived distributions
 
@@ -208,6 +227,9 @@ class TupleDistribution(Distribution, collections.abc.Sequence):
 	def __getitem__(self, index):
 		return self.coordinates[index]
 
+	def __iter__(self):
+		yield from self.coordinates
+
 	def sampleGiven(self, value):
 		return self.builder(value[coordinate] for coordinate in self.coordinates)
 
@@ -229,7 +251,8 @@ def toDistribution(val):
 	"""Wrap Python data types with Distributions, if necessary.
 
 	For example, tuples containing Samplables need to be converted into TupleDistributions
-	in order to keep track of dependencies properly."""
+	in order to keep track of dependencies properly.
+	"""
 	if isinstance(val, (tuple, list)):
 		coords = [toDistribution(c) for c in val]
 		if any(needsSampling(c) or needsLazyEvaluation(c) for c in coords):
@@ -242,17 +265,30 @@ def toDistribution(val):
 
 class FunctionDistribution(Distribution):
 	"""Distribution resulting from passing distributions to a function"""
-	def __init__(self, func, args, kwargs, support=None):
+	def __init__(self, func, args, kwargs, support=None, valueType=None):
 		args = tuple(toDistribution(arg) for arg in args)
 		kwargs = { name: toDistribution(arg) for name, arg in kwargs.items() }
-		super().__init__(*args, *kwargs.values())
+		if valueType is None:
+			valueType = typing.get_type_hints(func).get('return')
+		super().__init__(*args, *kwargs.values(), valueType=valueType)
 		self.function = func
 		self.arguments = args
 		self.kwargs = kwargs
 		self.support = support
 
 	def sampleGiven(self, value):
-		args = tuple(value[arg] for arg in self.arguments)
+		args = []
+		for arg in self.arguments:
+			if isinstance(arg, StarredDistribution):
+				val = value[arg]
+				try:
+					iter(val)
+				except TypeError:	# TODO improve backtrace
+					raise TypeError(f"'{type(val).__name__}' object on line {arg.lineno} "
+					                "is not iterable") from None
+				args.extend(val)
+			else:
+				args.append(value[arg])
 		kwargs = { name: value[arg] for name, arg in self.kwargs.items() }
 		return self.function(*args, **kwargs)
 
@@ -281,14 +317,15 @@ class FunctionDistribution(Distribution):
 		args = argsToString(itertools.chain(self.arguments, self.kwargs.items()))
 		return f'{self.function.__name__}{args}'
 
-def distributionFunction(method, support=None):
+def distributionFunction(method, support=None, valueType=None):
 	"""Decorator for wrapping a function so that it can take distributions as arguments."""
+	@unpacksDistributions
 	@functools.wraps(method)
 	def helper(*args, **kwargs):
 		args = tuple(toDistribution(arg) for arg in args)
 		kwargs = { name: toDistribution(arg) for name, arg in kwargs.items() }
 		if any(needsSampling(arg) for arg in itertools.chain(args, kwargs.values())):
-			return FunctionDistribution(method, args, kwargs, support)
+			return FunctionDistribution(method, args, kwargs, support, valueType)
 		elif any(needsLazyEvaluation(arg) for arg in itertools.chain(args, kwargs.values())):
 			# recursively call this helper (not the original function), since the delayed
 			# arguments may evaluate to distributions, in which case we'll have to make a
@@ -298,7 +335,7 @@ def distributionFunction(method, support=None):
 			return method(*args, **kwargs)
 	return helper
 
-def monotonicDistributionFunction(method):
+def monotonicDistributionFunction(method, valueType=None):
 	"""Like distributionFunction, but additionally specifies that the function is monotonic."""
 	def support(*subsupports, **kwss):
 		mins, maxes = zip(*subsupports)
@@ -307,21 +344,45 @@ def monotonicDistributionFunction(method):
 		l = None if None in mins or None in kwmins else method(*mins, **kwmins)
 		r = None if None in maxes or None in kwmaxes else method(*maxes, **kwmaxes)
 		return l, r
-	return distributionFunction(method, support=support)
+	return distributionFunction(method, support=support, valueType=valueType)
+
+class StarredDistribution(Distribution):
+	"""A placeholder for the iterable unpacking operator * applied to a distribution."""
+	def __init__(self, value, lineno):
+		assert isinstance(value, Distribution)
+		self.value = value
+		self.lineno = lineno	# for error handling when unpacking fails
+		super().__init__(value, valueType=value.valueType)
+
+	def sampleGiven(self, value):
+		return value[self.value]
+
+	def evaluateInner(self, context):
+		return StarredDistribution(valueInContext(self.value, context))
+
+	def __str__(self):
+		return f'*{self.value}'
 
 class MethodDistribution(Distribution):
 	"""Distribution resulting from passing distributions to a method of a fixed object"""
-	def __init__(self, method, obj, args, kwargs):
+	def __init__(self, method, obj, args, kwargs, valueType=None):
 		args = tuple(toDistribution(arg) for arg in args)
 		kwargs = { name: toDistribution(arg) for name, arg in kwargs.items() }
-		super().__init__(*args, *kwargs.values())
+		if valueType is None:
+			valueType = typing.get_type_hints(method).get('return')
+		super().__init__(*args, *kwargs.values(), valueType=valueType)
 		self.method = method
 		self.object = obj
 		self.arguments = args
 		self.kwargs = kwargs
 
 	def sampleGiven(self, value):
-		args = (value[arg] for arg in self.arguments)
+		args = []
+		for arg in self.arguments:
+			if isinstance(arg, StarredDistribution):
+				args.extend(value[arg.value])
+			else:
+				args.append(value[arg])
 		kwargs = { name: value[arg] for name, arg in self.kwargs.items() }
 		return self.method(self.object, *args, **kwargs)
 
@@ -345,6 +406,7 @@ class MethodDistribution(Distribution):
 
 def distributionMethod(method):
 	"""Decorator for wrapping a method so that it can take distributions as arguments."""
+	@unpacksDistributions
 	@functools.wraps(method)
 	def helper(self, *args, **kwargs):
 		args = tuple(toDistribution(arg) for arg in args)
@@ -515,7 +577,7 @@ class Range(Distribution):
 	def __init__(self, low, high):
 		low = type_support.toScalar(low, f'Range endpoint {low} is not a scalar')
 		high = type_support.toScalar(high, f'Range endpoint {high} is not a scalar')
-		super().__init__(low, high)
+		super().__init__(low, high, valueType=float)
 		self.low = low
 		self.high = high
 
@@ -561,7 +623,7 @@ class Normal(Distribution):
 	def __init__(self, mean, stddev):
 		mean = type_support.toScalar(mean, f'Normal mean {mean} is not a scalar')
 		stddev = type_support.toScalar(stddev, f'Normal stddev {stddev} is not a scalar')
-		super().__init__(mean, stddev)
+		super().__init__(mean, stddev, valueType=float)
 		self.mean = mean
 		self.stddev = stddev
 
@@ -716,7 +778,7 @@ class DiscreteRange(Distribution):
 		else:
 			weights = tuple(weights)
 			assert len(weights) == high - low + 1
-		super().__init__()
+		super().__init__(valueType=int)
 		self.low = low
 		self.high = high
 		self.weights = weights
@@ -801,3 +863,46 @@ class Options(MultiplexerDistribution):
 			return f'{type(self).__name__}({self.optWeights})'
 		else:
 			return f'{type(self).__name__}{argsToString(self.options)}'
+
+@unpacksDistributions
+def Uniform(*opts):
+	"""Uniform distribution over a finite list of options.
+
+	Implemented as an instance of `Options` when the set of options is known
+	statically, and an instance of `UniformDistribution` otherwise.
+	"""
+	if any(isinstance(opt, StarredDistribution) for opt in opts):
+		return UniformDistribution(opts)
+	else:
+		return Options(opts)
+
+class UniformDistribution(Distribution):
+	"""Uniform distribution over a variable number of options.
+
+	See `Options` for the more common uniform distribution over a fixed number
+	of options. This class is for the special case where iterable unpacking is
+	applied to a distribution, so that the number of options is unknown at
+	compile time.
+	"""
+	def __init__(self, opts):
+		self.options = opts
+		valueType = type_support.unifyingType(self.options)
+		super().__init__(*self.options, valueType=valueType)
+
+	def sampleGiven(self, value):
+		opts = []
+		for opt in self.options:
+			if isinstance(opt, StarredDistribution):
+				opts.extend(value[opt])
+			else:
+				opts.append(value[opt])
+		if not opts:
+			raise RuntimeError('tried to create uniform distribution over empty domain')
+		return random.choice(opts)
+
+	def evaluateInner(self, context):
+		opts = tuple(valueInContext(opt, context) for opt in self.options)
+		return UniformDistribution(opts)
+
+	def __str__(self):
+		return f'UniformDistribution({self.options})'

@@ -10,9 +10,10 @@ import shapely.geometry
 import shapely.ops
 import shapely.prepared
 
-from scenic.core.distributions import Samplable, RejectionException, needsSampling
+from scenic.core.distributions import (Samplable, RejectionException, needsSampling,
+                                       distributionMethod)
 from scenic.core.lazy_eval import valueInContext
-from scenic.core.vectors import Vector, OrientedVector, VectorDistribution
+from scenic.core.vectors import Vector, OrientedVector, VectorDistribution, VectorField
 from scenic.core.geometry import RotatedRectangle
 from scenic.core.geometry import sin, cos, hypot, findMinMax, pointIsInCone, averageVectors
 from scenic.core.geometry import headingOfSegment, triangulatePolygon, plotPolygon, polygonUnion
@@ -51,6 +52,13 @@ class PointInRegionDistribution(VectorDistribution):
 	def sampleGiven(self, value):
 		return value[self.region].uniformPointInner()
 
+	@property
+	def heading(self):
+		if self.region.orientation is not None:
+			return self.region.orientation[self]
+		else:
+			return 0
+
 	def __str__(self):
 		return f'PointIn({self.region})'
 
@@ -67,9 +75,28 @@ class Region(Samplable):
 	def intersect(self, other, triedReversed=False):
 		"""Get a `Region` representing the intersection of this one with another."""
 		if triedReversed:
-			return IntersectionRegion(self, other)
+			orientation = self.orientation
+			if orientation is None:
+				orientation = other.orientation
+			elif other.orientation is not None:
+				orientation = None 		# would be ambiguous, so pick no orientation
+			return IntersectionRegion(self, other, orientation=orientation)
 		else:
 			return other.intersect(self, triedReversed=True)
+
+	def intersects(self, other):
+		"""Check if this `Region` intersects another."""
+		raise NotImplementedError
+
+	def union(self, other, triedReversed=False):
+		"""Get a `Region` representing the union of this one with another.
+
+		Not supported by all region types.
+		"""
+		if triedReversed:
+			raise NotImplementedError
+		else:
+			return other.union(self, triedReversed=True)
 
 	@staticmethod
 	def uniformPointIn(region):
@@ -86,11 +113,11 @@ class Region(Samplable):
 
 	def uniformPointInner(self):
 		"""Do the actual random sampling. Implemented by subclasses."""
-		raise NotImplementedError()
+		raise NotImplementedError
 
 	def containsPoint(self, point):
 		"""Check if the `Region` contains a point. Implemented by subclasses."""
-		raise NotImplementedError()
+		raise NotImplementedError
 
 	def containsObject(self, obj):
 		"""Check if the `Region` contains an :obj:`~scenic.core.object_types.Object`.
@@ -111,9 +138,12 @@ class Region(Samplable):
 		vec = toVector(thing, '"X in Y" with X not an Object or a vector')
 		return self.containsPoint(vec)
 
+	def distanceTo(self, point):
+		raise NotImplementedError
+
 	def getAABB(self):
 		"""Axis-aligned bounding box for this `Region`. Implemented by some subclasses."""
-		raise NotImplementedError()
+		raise NotImplementedError
 
 	def orient(self, vec):
 		"""Orient the given vector along the region's orientation, if any."""
@@ -136,6 +166,9 @@ class AllRegion(Region):
 	def containsObject(self, obj):
 		return True
 
+	def distanceTo(self, point):
+		return 0
+
 	def __eq__(self, other):
 		return type(other) is AllRegion
 
@@ -147,6 +180,9 @@ class EmptyRegion(Region):
 	def intersect(self, other, triedReversed=False):
 		return self
 
+	def union(self, other, triedReversed=False):
+		return other
+
 	def uniformPointInner(self):
 		raise RejectionException(f'sampling empty Region')
 
@@ -156,7 +192,10 @@ class EmptyRegion(Region):
 	def containsObject(self, obj):
 		return False
 
-	def show(self, plt, style=None):
+	def distanceTo(self, point):
+		return float('inf')
+
+	def show(self, plt, style=None, **kwargs):
 		pass
 
 	def __eq__(self, other):
@@ -194,6 +233,9 @@ class CircularRegion(Region):
 		point = point.toVector()
 		return point.distanceTo(self.center) <= self.radius
 
+	def distanceTo(self, point):
+		return max(0, point.distanceTo(self.center) - self.radius)
+
 	def uniformPointInner(self):
 		x, y = self.center
 		r = random.triangular(0, self.radius, self.radius)
@@ -217,11 +259,11 @@ class CircularRegion(Region):
 
 class SectorRegion(Region):
 	def __init__(self, center, radius, heading, angle, resolution=32):
-		super().__init__('Sector', center, radius, heading, angle)
 		self.center = center.toVector()
 		self.radius = radius
 		self.heading = heading
 		self.angle = angle
+		super().__init__('Sector', self.center, radius, heading, angle)
 		r = (radius / 2) * cos(angle / 2)
 		self.circumcircle = (self.center.offsetRadially(r, heading), r)
 		self.resolution = resolution
@@ -332,8 +374,13 @@ class RectangularRegion(RotatedRectangle, Region):
 
 class PolylineRegion(Region):
 	"""Region given by one or more polylines (chain of line segments)"""
-	def __init__(self, points=None, polyline=None, orientation=True):
-		super().__init__('Polyline', orientation=orientation)
+	def __init__(self, points=None, polyline=None, orientation=True, name='Polyline'):
+		if orientation is True:
+			orientation = VectorField('Polyline', self.defaultOrientation)
+			self.usingDefaultOrientation = True
+		else:
+			self.usingDefaultOrientation = False
+		super().__init__(name, orientation=orientation)
 		if points is not None:
 			points = tuple(points)
 			if len(points) < 2:
@@ -352,6 +399,7 @@ class PolylineRegion(Region):
 			else:
 				raise RuntimeError('tried to create PolylineRegion from non-LineString')
 			self.lineString = polyline
+			self.points = None
 		else:
 			raise RuntimeError('must specify points or polyline for PolylineRegion')
 		if not self.lineString.is_valid:
@@ -365,6 +413,12 @@ class PolylineRegion(Region):
 			total += math.hypot(dx, dy)
 			cumulativeLengths.append(total)
 		self.cumulativeLengths = cumulativeLengths
+		if self.points is None:
+			pts = []
+			for p, q in self.segments:
+				pts.append(p)
+			pts.append(q)
+			self.points = pts
 
 	@classmethod
 	def segmentsOf(cls, lineString):
@@ -373,8 +427,9 @@ class PolylineRegion(Region):
 			points = list(lineString.coords)
 			if len(points) < 2:
 				raise RuntimeError('LineString has fewer than 2 points')
-			last = points[0]
+			last = Vector(*points[0][:2])
 			for point in points[1:]:
+				point = point[:2]
 				segments.append((last, point))
 				last = point
 			return segments
@@ -386,12 +441,16 @@ class PolylineRegion(Region):
 		else:
 			raise RuntimeError('called segmentsOf on non-linestring')
 
+	def defaultOrientation(self, point):
+		start, end = self.nearestSegmentTo(point)
+		return start.angleTo(end)
+
 	def uniformPointInner(self):
 		pointA, pointB = random.choices(self.segments,
 		                                cum_weights=self.cumulativeLengths)[0]
 		interpolation = random.random()
 		x, y = averageVectors(pointA, pointB, weight=interpolation)
-		if self.orientation is True:
+		if self.usingDefaultOrientation:
 			return OrientedVector(x, y, headingOfSegment(pointA, pointB))
 		else:
 			return self.orient(Vector(x, y))
@@ -408,19 +467,98 @@ class PolylineRegion(Region):
 			return PolylineRegion(polyline=intersection)
 		return super().intersect(other, triedReversed)
 
+	def intersects(self, other):
+		poly = toPolygon(other)
+		if poly is not None:
+			intersection = self.lineString & poly
+			return not intersection.is_empty
+		return super().intersects(other)
+
+	@staticmethod
+	def unionAll(regions):
+		regions = tuple(regions)
+		if not regions:
+			return nowhere
+		if any(not isinstance(region, PolylineRegion) for region in regions):
+			raise RuntimeError(f'cannot take Polyline union of regions {regions}')
+		# take union by collecting LineStrings, to preserve the order of points
+		strings = []
+		for region in regions:
+			string = region.lineString
+			if isinstance(string, shapely.geometry.MultiLineString):
+				strings.extend(string)
+			else:
+				strings.append(string)
+		newString = shapely.geometry.MultiLineString(strings)
+		return PolylineRegion(polyline=newString)
+
 	def containsPoint(self, point):
 		return self.lineString.intersects(shapely.geometry.Point(point))
 
 	def containsObject(self, obj):
 		return False
 
+	@distributionMethod
+	def distanceTo(self, point):
+		return self.lineString.distance(shapely.geometry.Point(point))
+
+	@distributionMethod
+	def signedDistanceTo(self, point):
+		"""Compute the signed distance of the PolylineRegion to a point.
+
+		The distance is positive if the point is left of the nearest segment,
+		and negative otherwise.
+		"""
+		dist = self.distanceTo(point)
+		start, end = self.nearestSegmentTo(point)
+		rp = point - start
+		tangent = end - start
+		return dist if tangent.angleWith(rp) >= 0 else -dist
+
+	@distributionMethod
+	def project(self, point):
+		return shapely.ops.nearest_points(self.lineString, shapely.geometry.Point(point))[0]
+
+	@distributionMethod
+	def nearestSegmentTo(self, point):
+		dist = self.lineString.project(shapely.geometry.Point(point))
+		# TODO optimize?
+		for segment, cumLen in zip(self.segments, self.cumulativeLengths):
+			if dist <= cumLen:
+				break
+		# FYI, could also get here if loop runs to completion due to rounding error
+		return (Vector(*segment[0]), Vector(*segment[1]))
+
+	def pointAlongBy(self, distance, normalized=False):
+		pt = self.lineString.interpolate(distance, normalized=normalized)
+		return Vector(pt.x, pt.y)
+
+	def equallySpacedPoints(self, spacing, normalized=False):
+		if normalized:
+			spacing *= self.length
+		return [self.pointAlongBy(d) for d in numpy.arange(0, self.length, spacing)]
+
+	@property
+	def length(self):
+		return self.lineString.length
+
 	def getAABB(self):
 		xmin, ymin, xmax, ymax = self.lineString.bounds
 		return ((xmin, ymin), (xmax, ymax))
 
-	def show(self, plt, style='r-'):
-		for pointA, pointB in self.segments:
-			plt.plot([pointA[0], pointB[0]], [pointA[1], pointB[1]], style)
+	def show(self, plt, style='r-', **kwargs):
+		plotPolygon(self.lineString, plt, style=style, **kwargs)
+
+	def __getitem__(self, i):
+		"""Get the ith point along this polyline.
+
+		If the region consists of multiple polylines, this order is linear
+		along each polyline but arbitrary across different polylines.
+		"""
+		return Vector(*self.points[i])
+
+	def __len__(self):
+		return len(self.points)
 
 	def __str__(self):
 		return f'PolylineRegion({self.lineString})'
@@ -436,8 +574,8 @@ class PolylineRegion(Region):
 
 class PolygonalRegion(Region):
 	"""Region given by one or more polygons (possibly with holes)"""
-	def __init__(self, points=None, polygon=None, orientation=None):
-		super().__init__('Polygon', orientation=orientation)
+	def __init__(self, points=None, polygon=None, orientation=None, name='Polygon'):
+		super().__init__(name, orientation=orientation)
 		if polygon is None and points is None:
 			raise RuntimeError('must specify points or polygon for PolygonalRegion')
 		if polygon is None:
@@ -510,12 +648,39 @@ class PolygonalRegion(Region):
 				raise RuntimeError('unhandled type of polygon intersection')
 		return super().intersect(other, triedReversed)
 
-	def union(self, other):
+	def intersects(self, other):
+		poly = toPolygon(other)
+		if poly is not None:
+			intersection = self.polygons & poly
+			return not intersection.is_empty
+		return super().intersects(other)
+
+	def union(self, other, triedReversed=False, buf=0):
 		poly = toPolygon(other)
 		if not poly:
-			raise RuntimeError(f'cannot take union of PolygonalRegion with {other}')
-		union = polygonUnion((self.polygons, poly))
-		return PolygonalRegion(polygon=union)
+			return super().union(other, triedReversed)
+		union = polygonUnion((self.polygons, poly), buf=buf)
+		orientation = VectorField.forUnionOf((self, other))
+		return PolygonalRegion(polygon=union, orientation=orientation)
+
+	@staticmethod
+	def unionAll(regions, buf=0):
+		regs, polys = [], []
+		for reg in regions:
+			if reg != nowhere:
+				regs.append(reg)
+				polys.append(toPolygon(reg))
+		if not polys:
+			return nowhere
+		if any(not poly for poly in polys):
+			raise RuntimeError(f'cannot take union of regions {regions}')
+		union = polygonUnion(polys, buf=buf)
+		orientation = VectorField.forUnionOf(regs)
+		return PolygonalRegion(polygon=union, orientation=orientation)
+
+	@property
+	def boundary(self):
+		return PolylineRegion(polyline=self.polygons.boundary)
 
 	@cached_property
 	def prepared(self):
@@ -531,12 +696,22 @@ class PolygonalRegion(Region):
 		# TODO improve boundary handling?
 		return self.prepared.contains(objPoly)
 
+	def containsRegion(self, other, tolerance=0):
+		poly = toPolygon(other)
+		if poly is None:
+			raise RuntimeError('cannot test inclusion of {other} in PolygonalRegion')
+		return self.polygons.buffer(tolerance).contains(poly)
+
+	@distributionMethod
+	def distanceTo(self, point):
+		return self.polygons.distance(shapely.geometry.Point(point))
+
 	def getAABB(self):
 		xmin, xmax, ymin, ymax = self.polygons.bounds
 		return ((xmin, ymin), (xmax, ymax))
 
-	def show(self, plt, style='r-'):
-		plotPolygon(self.polygons, plt, style=style)
+	def show(self, plt, style='r-', **kwargs):
+		plotPolygon(self.polygons, plt, style=style, **kwargs)
 
 	def __str__(self):
 		return '<PolygonalRegion>'
@@ -601,6 +776,11 @@ class PointSetRegion(Region):
 
 	def containsObject(self, obj):
 		raise NotImplementedError()
+
+	@distributionMethod
+	def distanceTo(self, point):
+		distance, _ = self.kdTree.query(point)
+		return distance
 
 	def __eq__(self, other):
 		if type(other) is not PointSetRegion:

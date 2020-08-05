@@ -2,10 +2,10 @@
 
 import sys
 import inspect
+import numbers
+import typing
 
-import numpy as np
-
-from scenic.core.distributions import Distribution
+from scenic.core.distributions import Distribution, RejectionException, StarredDistribution
 from scenic.core.lazy_eval import (DelayedArgument, valueInContext, requiredProperties,
                                    needsLazyEvaluation, toDelayedArgument)
 from scenic.core.vectors import Vector
@@ -48,7 +48,19 @@ def isA(thing, ty):
 
 def unifyingType(opts):		# TODO improve?
 	"""Most specific type unifying the given types."""
-	types = [underlyingType(opt) for opt in opts]
+	types = []
+	for opt in opts:
+		if isinstance(opt, StarredDistribution):
+			ty = underlyingType(opt)
+			typeargs = typing.get_args(ty)
+			if typeargs == ():
+				types.append(ty)
+			else:
+				for ty in typeargs:
+					if ty is not Ellipsis:
+						types.append(ty)
+		else:
+			types.append(underlyingType(opt))
 	if all(issubclass(ty, (float, int)) for ty in types):
 		return float
 	mro = inspect.getmro(types[0])
@@ -62,11 +74,7 @@ def unifyingType(opts):		# TODO improve?
 def canCoerceType(typeA, typeB):
 	"""Can values of typeA be coerced into typeB?"""
 	if typeB is float:
-		if issubclass(typeA, (float, int)):
-			return True
-		if issubclass(typeA, np.number) and not issubclass(typeA, np.complexfloating):
-			return True
-		return False
+		return issubclass(typeA, numbers.Real)
 	elif typeB is Heading:
 		return canCoerceType(typeA, float) or hasattr(typeA, 'toHeading')
 	elif typeB is Vector:
@@ -77,7 +85,19 @@ def canCoerceType(typeA, typeB):
 def canCoerce(thing, ty):
 	"""Can this value be coerced into the given type?"""
 	tt = underlyingType(thing)
-	return canCoerceType(tt, ty)
+	if canCoerceType(tt, ty):
+		return True
+	elif isinstance(thing, Distribution) and tt is object:
+		# unable to statically determine valueType of distribution; try
+		# sampling a value and checking its type
+		try:
+			value = thing.sample()
+			thing.valueType = type(value)	# to speed up future type checks
+			return canCoerce(value, ty)
+		except RejectionException:
+			return True		# fall back on type-checking at runtime
+	else:
+		return False
 
 def coerce(thing, ty):
 	"""Coerce something into the given type."""
