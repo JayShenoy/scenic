@@ -57,11 +57,12 @@ import inspect
 from scenic.core.distributions import Distribution, toDistribution
 from scenic.core.type_support import isA, toType, toTypes, toScalar, toHeading, toVector
 from scenic.core.type_support import evaluateRequiringEqualTypes, underlyingType
-from scenic.core.geometry import RotatedRectangle, normalizeAngle, apparentHeadingAtPoint
+from scenic.core.geometry import normalizeAngle, apparentHeadingAtPoint
 from scenic.core.object_types import Constructible
 from scenic.core.specifiers import Specifier
 from scenic.core.lazy_eval import DelayedArgument
 from scenic.core.utils import RuntimeParseError
+from scenic.core.vectors import OrientedVector
 from scenic.core.external_params import ExternalParameter
 
 ### Internals
@@ -568,7 +569,7 @@ def leftSpecHelper(syntax, pos, dist, axis, toComponents, makeOffset):
 	else:
 		raise RuntimeParseError(f'"{syntax} X by D" with D not a number or vector')
 	if isinstance(pos, OrientedPoint):		# TODO too strict?
-		val = lambda self: pos.relativePosition(makeOffset(self, dx, dy))
+		val = lambda self: pos.relativize(makeOffset(self, dx, dy))
 		new = DelayedArgument({axis}, val)
 		extras.add('heading')
 	else:
@@ -597,5 +598,5 @@ def Following(field, dist, fromPt=None):
 	dist = toScalar(dist, '"following F for D" with D not a number')
 	pos = field.followFrom(fromPt, dist)
 	heading = field[pos]
-	val = OrientedPoint(position=pos, heading=heading)
+	val = OrientedVector(*pos, heading)
 	return Specifier('position', val, optionals={'heading'})

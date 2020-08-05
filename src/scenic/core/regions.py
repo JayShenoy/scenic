@@ -8,6 +8,7 @@ import numpy
 import scipy.spatial
 import shapely.geometry
 import shapely.ops
+import shapely.prepared
 
 from scenic.core.distributions import Samplable, RejectionException, needsSampling
 from scenic.core.lazy_eval import valueInContext
@@ -16,7 +17,7 @@ from scenic.core.geometry import RotatedRectangle
 from scenic.core.geometry import sin, cos, hypot, findMinMax, pointIsInCone, averageVectors
 from scenic.core.geometry import headingOfSegment, triangulatePolygon, plotPolygon, polygonUnion
 from scenic.core.type_support import toVector
-from scenic.core.utils import cached, areEquivalent
+from scenic.core.utils import cached, cached_property, areEquivalent
 
 def toPolygon(thing):
 	if needsSampling(thing):
@@ -173,10 +174,13 @@ class CircularRegion(Region):
 		self.center = center.toVector()
 		self.radius = radius
 		self.circumcircle = (self.center, self.radius)
+		self.resolution = resolution
 
-		if not (needsSampling(self.center) or needsSampling(self.radius)):
-			ctr = shapely.geometry.Point(self.center)
-			self.polygon = ctr.buffer(self.radius, resolution=resolution)
+	@cached_property
+	def polygon(self):
+		assert not (needsSampling(self.center) or needsSampling(self.radius))
+		ctr = shapely.geometry.Point(self.center)
+		return ctr.buffer(self.radius, resolution=self.resolution)
 
 	def sampleGiven(self, value):
 		return CircularRegion(value[self.center], value[self.radius])
@@ -220,20 +224,25 @@ class SectorRegion(Region):
 		self.angle = angle
 		r = (radius / 2) * cos(angle / 2)
 		self.circumcircle = (self.center.offsetRadially(r, heading), r)
+		self.resolution = resolution
 
-		if not any(needsSampling(x) for x in (self.center, radius, heading, angle)):
-			ctr = shapely.geometry.Point(self.center)
-			circle = ctr.buffer(self.radius, resolution=resolution)
-			if angle >= math.tau - 0.001:
-				self.polygon = circle
-			else:
-				mask = shapely.geometry.Polygon([
-				    self.center,
-				    self.center.offsetRadially(radius, heading + angle/2),
-				    self.center.offsetRadially(2*radius, heading),
-				    self.center.offsetRadially(radius, heading - angle/2)
-				])
-				self.polygon = circle & mask
+	@cached_property
+	def polygon(self):
+		center, radius = self.center, self.radius
+		ctr = shapely.geometry.Point(center)
+		circle = ctr.buffer(radius, resolution=self.resolution)
+		if self.angle >= math.tau - 0.001:
+			return circle
+		else:
+			heading = self.heading
+			half_angle = self.angle / 2
+			mask = shapely.geometry.Polygon([
+			    center,
+			    center.offsetRadially(radius, heading + half_angle),
+			    center.offsetRadially(2*radius, heading),
+			    center.offsetRadially(radius, heading - half_angle)
+			])
+			return circle & mask
 
 	def sampleGiven(self, value):
 		return SectorRegion(value[self.center], value[self.radius],
@@ -508,15 +517,19 @@ class PolygonalRegion(Region):
 		union = polygonUnion((self.polygons, poly))
 		return PolygonalRegion(polygon=union)
 
+	@cached_property
+	def prepared(self):
+		return shapely.prepared.prep(self.polygons)
+
 	def containsPoint(self, point):
-		return self.polygons.intersects(shapely.geometry.Point(point))
+		return self.prepared.intersects(shapely.geometry.Point(point))
 
 	def containsObject(self, obj):
 		objPoly = obj.polygon
 		if objPoly is None:
 			raise RuntimeError('tried to test containment of symbolic Object!')
 		# TODO improve boundary handling?
-		return self.polygons.contains(objPoly)
+		return self.prepared.contains(objPoly)
 
 	def getAABB(self):
 		xmin, xmax, ymin, ymax = self.polygons.bounds
@@ -596,6 +609,7 @@ class PointSetRegion(Region):
 		        and other.points == self.points
 		        and other.orientation == self.orientation)
 
+	@cached
 	def __hash__(self):
 		return hash((self.name, self.points, self.orientation))
 

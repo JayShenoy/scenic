@@ -1,6 +1,7 @@
 """Python supporting code for the GTA model."""
 
 import math
+import random
 import time
 import colorsys
 from collections import namedtuple
