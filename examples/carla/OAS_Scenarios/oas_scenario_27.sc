@@ -38,7 +38,7 @@ for m in maneuvers:
 	if m.type == ManeuverType.STRAIGHT:
 		straight_manuevers.append(m)
 
-straight_maneuver = straight_manuevers[0]
+straight_maneuver = Uniform(*straight_maneuvers)
 startLane = straight_maneuver.startLane
 connectingLane = straight_maneuver.connectingLane
 endLane = straight_maneuver.endLane
@@ -57,7 +57,5 @@ def concatenateCenterlines(centerlines=[]):
 centerlines = [startLane.centerline, connectingLane.centerline, endLane.centerline]
 
 ego = Car on startLane.centerline,
-		with blueprint 'vehicle.audi.a2',
-		with behavior FollowTrajectoryBehavior(target_speed=15, trajectory=centerlines)
+		with behavior FollowTrajectoryBehavior(target_speed=10, trajectory=centerlines)
 
-# other = Car at lanes[2].centerline[-1]
