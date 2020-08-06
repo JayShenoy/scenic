@@ -316,6 +316,7 @@ class OrientedPoint(Point):
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
+		breakpoint()
 		self.heading = toScalar(self.heading, f'"heading" of {self} not a scalar')
 
 	@cached_property

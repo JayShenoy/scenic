@@ -70,13 +70,16 @@ def canCoerceType(typeA, typeB):
 	elif typeB is Heading:
 		return canCoerceType(typeA, float) or hasattr(typeA, 'toHeading')
 	elif typeB is Vector:
+		if isinstance(typeA, tuple) or isinstance(typeA, list): 
+			return True
 		return hasattr(typeA, 'toVector')
 	else:
 		return issubclass(typeA, typeB)
 
 def canCoerce(thing, ty):
 	"""Can this value be coerced into the given type?"""
-	tt = underlyingType(thing)
+	# TODO: @Matthew Add special case for tuples/list 
+	tt = underlyingType(thing) 
 	return canCoerceType(tt, ty)
 
 def coerce(thing, ty):
@@ -89,6 +92,10 @@ def coerce(thing, ty):
 	elif ty is Heading:
 		return thing.toHeading() if hasattr(thing, 'toHeading') else float(thing)
 	elif ty is Vector:
+		if isinstance(thing, tuple) or isinstance(thing, list):
+			# TODO: @Matthew Is this a proper length check? 
+			thing = Vector(thing[0], thing[1], thing[2]) if len(thing) == 3 else Vector(thing[0], thing[1])
+			return thing.toVector()
 		return thing.toVector()
 	else:
 		return thing

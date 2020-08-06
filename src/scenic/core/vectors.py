@@ -167,6 +167,9 @@ class Orientation():
 	def z(self):
 		return self.orientation.elements[3]
 
+	def get_euler(self):
+		return NotImplemented
+
 	def __mul__(self, other):
 		if type(other) is not Orientation:
 			return NotImplemented
@@ -270,7 +273,7 @@ class Vector(Samplable, collections.abc.Sequence):
 	def __rsub__(self, other):
 		return Vector(other[0] - self[0], other[1] - self[1], self[2] - other[2])
 	
-	@vectorOperator
+	@scalarOperator
 	def angleTo(self, other):
 		dx, dy, dz = other.toVector() - self
 		return normalizeAngle(math.atan2(dy, dx) - (math.pi / 2))
