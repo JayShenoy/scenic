@@ -2,10 +2,10 @@
 
 ## Vehicle blueprints
 
-carModels = {# for speed = 10
-      'vehicle.audi.a2', # Lateral PID:  K_P=0.3, K_D=0.2, K_I=0
-      'vehicle.audi.etron', # K_P=0.3, K_D=0.2, K_I=0
-      'vehicle.audi.tt',
+carModels = {# for speed = 10,  # Lateral PID:  K_P=0.3, K_D=0.2, K_I=0
+      'vehicle.audi.a2', ## not for turning
+      'vehicle.audi.etron', ## not for turning
+      'vehicle.audi.tt', ## not for turning
       'vehicle.bmw.grandtourer',
       # 'vehicle.bmw.isetta', # current PID controller not work 
       'vehicle.chevrolet.impala',
@@ -19,7 +19,7 @@ carModels = {# for speed = 10
       'vehicle.nissan.micra',
       'vehicle.nissan.patrol',
       'vehicle.seat.leon',
-      'vehicle.tesla.model3', ## K_P=0.3, K_D=0.2, K_I=0
+      # 'vehicle.tesla.model3', ## not for turning
       'vehicle.toyota.prius',
       'vehicle.volkswagen.t2'
 }

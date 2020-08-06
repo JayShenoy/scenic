@@ -55,7 +55,7 @@ behavior ConstantThrottleBehavior(x):
     take actions.SetThrottleAction(x)
 
 
-behavior FollowLaneBehavior(target_speed = 25, network = None):
+behavior FollowLaneBehavior(target_speed = 10, network = None):
 	assert network is not None
 
 	# instantiate longitudinal and latitudinal pid controllers
@@ -69,9 +69,6 @@ behavior FollowLaneBehavior(target_speed = 25, network = None):
 			current_speed = self.speed
 		else:
 			current_speed = 0
-			print("self.speed is None")
-
-		print("current_speed: ", self.speed)
 
 		nearest_line_points = network.laneAt(self).centerline.nearestSegmentTo(self.position)
 		nearest_line_segment = PolylineRegion(nearest_line_points)
@@ -85,12 +82,11 @@ behavior FollowLaneBehavior(target_speed = 25, network = None):
 		current_steer_angle = _lat_controller.run_step(cte)
 
 		take actions.FollowLaneAction(throttle=throttle, current_steer=current_steer_angle, past_steer=past_steer_angle)
-		# take actions.FollowLaneAction(throttle=throttle, current_steer=0, past_steer=0)
 		past_steer_angle = current_steer_angle
 
 	
 
-behavior FollowTrajectoryBehavior(target_speed = 25, trajectory = None):
+behavior FollowTrajectoryBehavior(target_speed = 10, trajectory = None):
 	assert trajectory is not None
 
 	trajectory_line = concatenateCenterlines(trajectory)
@@ -105,8 +101,6 @@ behavior FollowTrajectoryBehavior(target_speed = 25, trajectory = None):
 			current_speed = self.speed
 		else:
 			current_speed = 0
-			print("self.speed is None")
-		print("current_speed: ", self.speed)
 
 		nearest_line_points = trajectory_line.nearestSegmentTo(self.position)
 		nearest_line_segment = PolylineRegion(nearest_line_points)

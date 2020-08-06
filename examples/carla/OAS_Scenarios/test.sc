@@ -3,39 +3,54 @@ import scenic.simulators.carla.actions as actions
 import time
 
 from scenic.simulators.domains.driving.network import loadNetwork
-loadNetwork('/home/carla_challenge/Downloads/Town01.xodr')
+loadNetwork('/home/carla_challenge/Downloads/Town03.xodr')
 
 from scenic.simulators.carla.model import *
 from scenic.simulators.carla.behaviors import *
 
-simulator = CarlaSimulator('Town01')
+simulator = CarlaSimulator('Town03')
 
-# roads = network.roads
-# select_road = Uniform(*roads)
-# possible_lanes = select_road.lanes 
-# select_lane = Uniform(*possible_lanes)
+"""
+Ego-vehicle performs a lane changing to evade a
+leading vehicle, which is moving too slowly.
+Based on 2019 Carla Challenge Traffic Scenario 05.
+"""
 
-threeWayIntersections = []
-for intersection in network.intersections:
-	if intersection.is3Way:
-		threeWayIntersections.append(intersection)
+EGO_SPEED = 10
+SLOW_CAR_SPEED = 6
+EGO_TO_SLOWCAR = (15,20)
+DIST_THRESHOLD = 15
 
-# intersection = Uniform(*fourWayIntersections)
-intersection = threeWayIntersections[5]
-maneuvers = intersection.maneuvers
+#EGO BEHAVIOR
+behavior EgoBehavior(origpath=[],leftpath=[]):
+    try:
+        FollowLaneBehavior(EGO_SPEED,network)
+    interrupt when ((distance to slowCar) < DIST_THRESHOLD):
+        print('THRESHOLD PASSED: CHANGING LANES')
+        FollowTrajectoryBehavior(EGO_SPEED,leftpath)
 
-leftTurn_manuevers = []
-for m in maneuvers:
-	if m.type == ManeuverType.LEFT_TURN:
-		leftTurn_manuevers.append(m)
+#OTHER BEHAVIOR
+behavior SlowCarBehavior():
+    FollowLaneBehavior(SLOW_CAR_SPEED, network)
 
-leftTurn_maneuver = leftTurn_manuevers[1]
-L_startLane = leftTurn_maneuver.startLane
-L_connectingLane = leftTurn_maneuver.connectingLane
-L_endLane = leftTurn_maneuver.endLane
+#GEOMETRY
+laneSecsWithLeftLane = []
+for lane in network.lanes:
+    for laneSec in lane.sections:
+        if laneSec.laneToLeft is not None:
+            laneSecsWithLeftLane.append(laneSec)
+assert len(laneSecsWithLeftLane) > 0, \
+    'No lane sections with adjacent left lane in network.'
 
-L_centerlines = [L_startLane.centerline, L_connectingLane.centerline, L_endLane.centerline]
+# initLaneSec = Uniform(*laneSecsWithLeftLane)
+initLaneSec = laneSecsWithLeftLane[10]
+leftLaneSec = initLaneSec.laneToLeft
 
-ego = Car at L_startLane[-1],
-		with behavior FollowTrajectoryBehavior(15, trajectory=L_centerlines),
-		with blueprint 'vehicle.tesla.model3'
+#PLACEMENT
+spawnPt = OrientedPoint on initLaneSec.centerline
+ego = Car ahead of spawnPt by 10,
+    with behavior EgoBehavior([initLaneSec.centerline], [leftLaneSec.centerline]),
+    with blueprint 'vehicle.tesla.model3'
+
+slowCar = Car following roadDirection from ego by EGO_TO_SLOWCAR,
+    with behavior SlowCarBehavior()

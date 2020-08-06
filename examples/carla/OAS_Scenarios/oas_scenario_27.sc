@@ -43,17 +43,6 @@ startLane = straight_maneuver.startLane
 connectingLane = straight_maneuver.connectingLane
 endLane = straight_maneuver.endLane
 
-def concatenateCenterlines(centerlines=[]):
-
-	line = []
-	if centerlines != []:
-		for centerline in centerlines:
-			for point in centerline:
-				if point not in line:
-					line.append(point)
-
-	return regionFromShapelyObject(LineString(line))
-
 centerlines = [startLane.centerline, connectingLane.centerline, endLane.centerline]
 
 ego = Car on startLane.centerline,
