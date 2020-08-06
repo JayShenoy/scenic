@@ -62,7 +62,7 @@ from scenic.core.object_types import Constructible
 from scenic.core.specifiers import Specifier
 from scenic.core.lazy_eval import DelayedArgument
 from scenic.core.utils import RuntimeParseError
-from scenic.core.vectors import OrientedVector
+from scenic.core.vectors import OrientedVector, ScenicTuple
 from scenic.core.external_params import ExternalParameter
 
 ### Internals
@@ -381,6 +381,11 @@ def At(pos):
 	"""The 'at <vector>' specifier.
 
 	Specifies 'position', with no dependencies."""
+	# TODO: @Matthew Some check here that 'pos' is a built-in tuple?
+	if isinstance(pos, tuple):
+		st = ScenicTuple(pos)
+		pos = toVector(st, 'specifer "at X" with X not a vector')
+		return Specifier('position', pos)
 	pos = toVector(pos, 'specifier "at X" with X not a vector')
 	return Specifier('position', pos)
 

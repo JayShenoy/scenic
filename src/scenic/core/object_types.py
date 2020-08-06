@@ -306,6 +306,7 @@ class OrientedPoint(Point):
 		viewAngle (float): View cone angle for ``can see`` operator. Default
 		  value :math:`2\\pi`.
 	"""
+	#TODO: @Matthew Do OrientedPoints need Orientation instead of just a scalar heading? 
 	heading: 0
 	viewAngle: math.tau
 
@@ -358,6 +359,7 @@ class Object(OrientedPoint, RotatedRectangle):
 	requireVisible: True
 	regionContainedIn: None
 	cameraOffset: Vector(0, 0)
+	#TODO: @Matthew Object needs shape and surface mutable attributes 
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
