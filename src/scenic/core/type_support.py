@@ -22,6 +22,8 @@ from scenic.core.utils import RuntimeParseError
 #	anything with a toHeading() method
 # coercible to a Vector:
 #   anything with a toVector() method
+#	tuple
+#   list
 # coercible to an object of type T:
 #   instances of T
 #
@@ -68,6 +70,8 @@ def canCoerceType(typeA, typeB):
 			return True
 		return False
 	elif typeB is Heading:
+		if isinstance(typeA, tuple) or isinstance(typeA, list):
+			return True
 		return canCoerceType(typeA, float) or hasattr(typeA, 'toHeading')
 	elif typeB is Vector:
 		if isinstance(typeA, tuple) or isinstance(typeA, list): 
@@ -90,6 +94,8 @@ def coerce(thing, ty):
 	if ty is float:
 		return float(thing)
 	elif ty is Heading:
+		# if isinstance(thing, tuple) or isinstance(thing, list):
+		# 	thing = 
 		return thing.toHeading() if hasattr(thing, 'toHeading') else float(thing)
 	elif ty is Vector:
 		if isinstance(thing, tuple) or isinstance(thing, list):
