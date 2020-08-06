@@ -319,17 +319,6 @@ class OrientedVector(Vector):
 	def __hash__(self):
 		return hash((self.coordinates, self.heading))
 
-class ScenicTuple(tuple):
-	"""Tuples that can be coerced to Scenic Vectors."""
-	def __new__(cls, tu):
-		return tuple.__new__(ScenicTuple, tu)
-
-	def toVector(self):
-		return self
-
-	def toHeading(self):
-		return self
-
 class VectorField:
 	def __init__(self, name, value):
 		self.name = name
