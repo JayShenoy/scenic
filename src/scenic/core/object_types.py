@@ -123,6 +123,11 @@ class Constructible(Samplable):
 		for spec in order:
 			spec.applyTo(self, optionalsForSpec[spec])
 
+		# Normalize types
+		self.properties = set(properties)
+		if 'position' in properties:
+			self.position = toVector(self.position, f'"position" of {self} not a vector')
+
 		# Set up dependencies
 		deps = []
 		for prop in properties:
@@ -130,7 +135,6 @@ class Constructible(Samplable):
 			val = getattr(self, prop)
 			deps.append(val)
 		super().__init__(deps)
-		self.properties = set(properties)
 
 		# Possibly register this object
 		self._register()
@@ -252,10 +256,6 @@ class Point(Constructible):
 	mutator: PropertyDefault({'positionStdDev'}, {'additive'},
 							 lambda self: PositionMutator(self.positionStdDev))
 	positionStdDev: 1
-
-	def __init__(self, *args, **kwargs):
-		super().__init__(*args, **kwargs)
-		self.position = toVector(self.position, f'"position" of {self} not a vector')
 
 	@cached_property
 	def visibleRegion(self):

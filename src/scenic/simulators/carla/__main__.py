@@ -6,8 +6,8 @@ from scenic.simulators.carla.simulator import CarlaSimulator
 
 # ==============================================================================
 # -- Parameters: CHANGEME ------------------------------------------------------
-carla_map = 'Town01'
-sc_file_path = 'scripts/CARLA_Scenarios/challenge9.sc'
+carla_map = 'Town03'
+sc_file_path = '../../../../examples/carla/dynamic/challenge2.sc'
 
 
 address = '127.0.0.1'

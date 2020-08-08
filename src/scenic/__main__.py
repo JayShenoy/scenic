@@ -6,6 +6,7 @@ import sys
 import time
 import argparse
 import random
+import os
 
 import scenic.syntax.translator as translator
 from scenic.simulators import SimulationCreationError
@@ -21,6 +22,8 @@ parser.add_argument('-z', '--zoom', help='zoom expansion factor', type=float, de
 parser.add_argument('-s', '--seed', help='random seed', type=int)
 parser.add_argument('-v', '--verbosity', help='verbosity level (default 1)',
                     type=int, choices=(0, 1, 2, 3), default=1)
+parser.add_argument('-r', '--record', help='record simulation videos', action='store_true')
+parser.add_argument('-o', '--out', help='output directory', type=str, default='.')
 
 # Simulation options
 simOpts = parser.add_argument_group('simulation options')
@@ -74,12 +77,14 @@ def generateScene():
         print(f'  Generated scene in {iterations} iterations, {totalTime:.4g} seconds.')
     return scene, iterations
 
-def runSimulation(scene):
+def runSimulation(scene, output_path):
     startTime = time.time()
     if args.verbosity >= 1:
         print('  Beginning simulation...')
     try:
-        scene.simulate(maxSteps=args.time, verbosity=args.verbosity)
+        _, simulation = scene.simulate(maxSteps=args.time, verbosity=args.verbosity)
+        if args.record:
+            simulation.save_videos(output_path)
     except SimulationCreationError as e:
         if args.verbosity >= 1:
             print(f'  Failed to create simulation: {e}')
@@ -95,7 +100,9 @@ if args.gather_stats is None:   # Generate scenes interactively until killed
         scene, _ = generateScene()
         i += 1
         if args.simulate:
-            runSimulation(scene)
+            scene_name = '{}_{}'.format(args.scenario, i)
+            output_path = os.path.join(args.out, scene_name)
+            runSimulation(scene, output_path)
             if 0 < args.count <= i:
                 break
         else:

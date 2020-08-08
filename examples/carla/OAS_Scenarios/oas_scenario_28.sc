@@ -16,55 +16,47 @@ MAX_BREAK_THRESHOLD = 1
 TERMINATE_TIME = 20
 
 
-behavior EgoBehavior(target_speed=20, trajectory = None):
+behavior EgoBehavior(target_speed=10, trajectory = None):
 	assert trajectory is not None
 	brakeIntensity = 0.7
 
 	try: 
-		FollowTrajectoryBehavior(target_speed=15, trajectory=trajectory)
+		FollowTrajectoryBehavior(target_speed=10, trajectory=trajectory)
 
 	interrupt when distanceToAnyCars(car=self, thresholdDistance=10):
 		take actions.SetBrakeAction(brakeIntensity)
 
 
-threeWayIntersections = []
-for intersection in network.intersections:
-	if intersection.is3Way:
-		threeWayIntersections.append(intersection)
 
+threeWayIntersections = filter(lambda i: i.is3Way, network.intersections)
 intersection = Uniform(*threeWayIntersections)
-# intersection = threeWayIntersections[5]
-maneuvers = intersection.maneuvers
+# print("intersection: ", threeWayIntersections.index(intersection))
 
-straight_manuevers = []
-for m in maneuvers:
-	if m.type == ManeuverType.STRAIGHT:
-		straight_manuevers.append(m)
+straight_maneuvers = filter(lambda m: m.type == ManeuverType.STRAIGHT, intersection.maneuvers)
+straight_maneuver = Uniform(*straight_maneuvers)
+# print("straight_maneuver: ", straight_maneuvers.index(straight_maneuver))
 
-straight_maneuver = Uniform(*straight_manuevers)
+
 startLane = straight_maneuver.startLane
 connectingLane = straight_maneuver.connectingLane
 endLane = straight_maneuver.endLane
-
 centerlines = [startLane.centerline, connectingLane.centerline, endLane.centerline]
 
 
-leftTurn_manuevers = []
-for m in straight_maneuver.conflictingManeuvers:
-	if m.type == ManeuverType.LEFT_TURN:
-		leftTurn_manuevers.append(m)
+conflicting_lefts = filter(lambda m: m.type == ManeuverType.LEFT_TURN, straight_maneuver.conflictingManeuvers)
+leftTurn_maneuver = Uniform(*conflicting_lefts)
+# print("conflicting_lefts: ", conflicting_lefts.index(leftTurn_maneuver))
 
-leftTurn_maneuver = Uniform(*leftTurn_manuevers)
 L_startLane = leftTurn_maneuver.startLane
 L_connectingLane = leftTurn_maneuver.connectingLane
 L_endLane = leftTurn_maneuver.endLane
-
 L_centerlines = [L_startLane.centerline, L_connectingLane.centerline, L_endLane.centerline]
 
-ego = Car on startLane.centerline,
-		with behavior EgoBehavior(target_speed=10, trajectory=centerlines)
+# other = Car on startLane.centerline,
+# 		with behavior EgoBehavior(target_speed=10, trajectory=centerlines)
 
-other = Car at L_startLane.centerline[-1],
+
+ego = Car on L_startLane.centerline,
 		with behavior FollowTrajectoryBehavior(target_speed=10, trajectory=L_centerlines)
 
 # require that other car reaches the intersection before the ego car

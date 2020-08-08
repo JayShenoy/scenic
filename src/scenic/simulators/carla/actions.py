@@ -296,20 +296,6 @@ class FollowLaneAction(simulators.Action):
 			:param waypoint: target location encoded as a waypoint
 			:return: distance (in meters) to the waypoint
 		"""
-		# past_steering = vehicle.get_control().steer
-
-		# if self.args_longitudinal!=None:
-		# 	_lon_controller = PIDLongitudinalController(vehicle, **self.args_longitudinal)
-		# else:
-		# 	_lon_controller = PIDLongitudinalController(vehicle)
-
-		# if self.args_lateral!=None:
-		# 	_lat_controller = PIDLateralController(vehicle, **self.args_lateral)
-		# else: 
-		# 	_lat_controller = PIDLateralController(vehicle)
-
-		# acceleration = _lon_controller.run_step(self.target_speed)
-		# current_steering = _lat_controller.run_step(self.cte)
 
 		control = carla.VehicleControl()
 
@@ -332,9 +318,9 @@ class FollowLaneAction(simulators.Action):
 		else:
 		    steering = max(-self.max_steer, self.current_steer)
 
-		print("steer: ", steering)
-		print("throttle: ", control.throttle)
-		print("brake: ", control.brake)
+		# print("steer: ", steering)
+		# print("throttle: ", control.throttle)
+		# print("brake: ", control.brake)
 		control.steer = steering
 		control.hand_brake = False
 		control.manual_gear_shift = False
@@ -443,7 +429,7 @@ class PIDLateralController():
 		self.current_time = time.time()
 		delta_time = self.current_time - self.last_time
 		delta_error = error - self.last_error
-		print("delta_time: ", delta_time)
+		# print("delta_time: ", delta_time)
 
 		# if (delta_time >= self.sample_time):
 		self.PTerm = self.Kp * error
@@ -463,6 +449,6 @@ class PIDLateralController():
 		self.last_error = error
 
 		self.output = self.PTerm + (self.Ki * self.ITerm) + (self.Kd * self.DTerm)
-		print("cte: ", cte)
+		# print("cte: ", cte)
 
 		return np.clip(self.output, -1, 1)

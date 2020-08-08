@@ -38,7 +38,7 @@ class Simulator:
             if verbosity >= 2:
                 print(f'  Simulation {iterations} ended successfully at time step '
                       f'{simulation.currentTime} because of: {terminationReason}')
-            return trajectory
+            return trajectory, simulation
         raise RuntimeError(f'failed to generate valid simulation in {maxIterations} iterations')
 
     def createSimulation(self, scene):

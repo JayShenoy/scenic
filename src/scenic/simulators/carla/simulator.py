@@ -9,8 +9,11 @@ import pygame
 import scenic.simulators as simulators
 import scenic.simulators.carla.utils.utils as utils
 import scenic.simulators.carla.utils.visuals as visuals
+import scenic.simulators.carla.utils.bounding_boxes as bb
 import time
 
+import numpy as np
+import json
 
 class CarlaSimulator(simulators.Simulator):
 	def __init__(self, carla_map, address='127.0.0.1', port=2000, timeout=10, render=True,
@@ -107,6 +110,29 @@ class CarlaSimulation(simulators.Simulation):
 					self.cameraManager.set_sensor(camIndex)
 					self.cameraManager.set_transform(self.camTransform)
 
+					VIEW_WIDTH = 1280.0
+					VIEW_HEIGHT = 720.0
+					VIEW_FOV = 90.0
+					calibration = np.identity(3)
+					calibration[0, 2] = VIEW_WIDTH / 2.0
+					calibration[1, 2] = VIEW_HEIGHT / 2.0
+					calibration[0, 0] = calibration[1, 1] = VIEW_WIDTH / (2.0 * np.tan(VIEW_FOV * np.pi / 360.0))
+					self.cameraManager.sensor.calibration = calibration
+
+					semanticCamIndex = 5
+					semanticCamPosIndex = 0
+					self.semanticCameraManager = visuals.CameraManager(self.world, carlaActor, self.hud)
+					self.semanticCameraManager._transform_index = semanticCamPosIndex
+					self.semanticCameraManager.set_sensor(semanticCamIndex)
+					self.semanticCameraManager.set_transform(self.camTransform)
+
+					lidarSensorIndex = 6
+					lidarSensorPosIndex = 1
+					self.lidarSensorManager = visuals.CameraManager(self.world, carlaActor, self.hud)
+					self.lidarSensorManager._transform_index = lidarSensorPosIndex
+					self.lidarSensorManager.set_sensor(lidarSensorIndex)
+					self.lidarSensorManager.set_transform(lidarSensorPosIndex)
+
 		self.world.tick() ## allowing manualgearshift to take effect 
 
 		for obj in self.objects:
@@ -121,6 +147,9 @@ class CarlaSimulation(simulators.Simulation):
 			if obj.speed is not None:
 				equivVel = utils.scenicSpeedToCarlaVelocity(obj.speed, obj.heading)
 				obj.carlaActor.set_velocity(equivVel)
+
+		# Initialize array of 3D bounding boxes
+		self.bounding_boxes = []
 
 	def readPropertiesFromCarla(self):
 		for obj in self.objects:
@@ -161,10 +190,22 @@ class CarlaSimulation(simulators.Simulation):
 		# Run simulation for one timestep
 		self.world.tick()
 
+		vehicles = self.world.get_actors().filter('vehicle.*')
+
 		# Render simulation
 		if self.render:
 			# self.hud.tick(self.world, self.ego, self.displayClock)
 			self.cameraManager.render(self.display)
+
+			# Project and draw bounding boxes to display
+			# if self.render_bounding_boxes:
+				# bounding_boxes = bb.ClientSideBoundingBoxes.get_bounding_boxes(vehicles, self.cameraManager.sensor)
+				# bb.ClientSideBoundingBoxes.draw_bounding_boxes(self.display, bounding_boxes)
+
+			bounding_boxes_3d = bb.ClientSideBoundingBoxes.get_3d_bounding_boxes(vehicles, self.cameraManager.sensor)
+			bounding_boxes_3d = [bb.tolist() for bb in bounding_boxes_3d]
+			self.bounding_boxes.append(bounding_boxes_3d)
+
 			# self.hud.render(self.display)
 			pygame.display.flip()
 
@@ -172,3 +213,10 @@ class CarlaSimulation(simulators.Simulation):
 		self.readPropertiesFromCarla()
 
 		return self.currentState()
+
+	def save_videos(self, scene_name):
+		self.cameraManager.save_video('{}_rgb.mp4'.format(scene_name))
+		self.semanticCameraManager.save_video('{}_semantic.mp4'.format(scene_name))
+
+		with open('{}_boxes.json'.format(scene_name), 'w') as f:
+			json.dump(self.bounding_boxes, f)

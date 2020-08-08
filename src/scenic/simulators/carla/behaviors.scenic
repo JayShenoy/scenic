@@ -71,8 +71,6 @@ behavior FollowLaneBehavior(target_speed = 10, network = None):
 
 		if not entering_intersection and (distance from self.position to current_centerline[-1]) < 20 :
 			entering_intersection = True
-			print("current centerline edge: ", current_centerline[-1])
-			print("lane switch to connectingLane")
 			select_maneuver = Uniform(*current_lane.maneuvers)
 
 			# assumption: there always will be a maneuver
@@ -83,26 +81,11 @@ behavior FollowLaneBehavior(target_speed = 10, network = None):
 			end_lane = current_lane
 
 			if select_maneuver.type != ManeuverType.STRAIGHT:
-				print("entering turning lane")
 				in_turning_lane = True
-			else:
-				print("going straight")
 
 		if (end_lane is not None) and (self.position in end_lane):
-			print("end lane entered")
 			in_turning_lane = False
 			entering_intersection = False 
-
-		# if entering_intersection and (distance from self.position to current_centerline[-1]) < 1:
-		# 	entering_intersection = False
-		# 	in_turning_lane = False
-		# 	print("end of connecting lane reached!")
-		# 	print("entering the endLane")
-		# 	select_maneuver = Uniform(*current_lane.maneuvers)
-		# 	current_lane = select_maneuver.endLane
-		# 	current_centerline = concatenateCenterlines([current_centerline, select_maneuver.connectingLane.centerline, \
-		# 		select_maneuver.endLane.centerline])
-		# 	print("current centerline edge: ", current_centerline[-1])
 			
 		nearest_line_points = current_centerline.nearestSegmentTo(self.position)
 		nearest_line_segment = PolylineRegion(nearest_line_points)
@@ -118,8 +101,6 @@ behavior FollowLaneBehavior(target_speed = 10, network = None):
 		current_steer_angle = _lat_controller.run_step(cte)
 		past_steer_angle = current_steer_angle
 		past_speed = current_speed
-
-		# print(self in current_lane)
 
 		take actions.FollowLaneAction(throttle=throttle, current_steer=current_steer_angle, past_steer=past_steer_angle)
 
