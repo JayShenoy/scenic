@@ -6,6 +6,10 @@ from scenic.core.regions import regionFromShapelyObject
 from shapely.geometry import LineString
 import math
 
+from scenic.simulators.domains.driving.network import loadNetwork
+loadNetwork('/home/carla_challenge/Downloads/Town03.xodr')
+from scenic.simulators.carla.model import *
+
 def concatenateCenterlines(centerlines=[]):
 
 	line = []
@@ -37,19 +41,8 @@ behavior AccelerateForwardBehavior():
 	take actions.SetHandBrakeAction(False)
 	take actions.SetThrottleAction(0.5)
 
-behavior LanekeepingBehavior(gain=0.1):
-	take actions.SetReverseAction(False)
-	take actions.SetHandBrakeAction(False)
-	take actions.SetThrottleAction(0.5)
-
-	while True:
-		delta = self.heading relative to (roadDirection at self.position)
-		take actions.SetSteerAction(-gain * delta)
-
-
 behavior WalkForwardBehavior():
 	take actions.SetSpeedAction(0.5)
-
 
 behavior ConstantThrottleBehavior(x):
     take actions.SetThrottleAction(x)
@@ -62,27 +55,73 @@ behavior FollowLaneBehavior(target_speed = 10, network = None):
 	_lon_controller = actions.PIDLongitudinalController(self)
 	_lat_controller = actions.PIDLateralController(self)
 	past_steer_angle = 0
+	past_speed = 0 # making an assumption here that the agent starts from zero speed
+	current_lane = network.laneAt(self)
+	current_centerline = current_lane.centerline
+	in_turning_lane = False # assumption that the agent is not instantiated within a connecting lane
+	entering_intersection = False # assumption that the agent is not instantiated within an intersection
+	end_lane = None
 
 	while True:
 
 		if self.speed is not None:
 			current_speed = self.speed
 		else:
-			current_speed = 0
+			current_speed = past_speed
 
-		nearest_line_points = network.laneAt(self).centerline.nearestSegmentTo(self.position)
+		if not entering_intersection and (distance from self.position to current_centerline[-1]) < 20 :
+			entering_intersection = True
+			print("current centerline edge: ", current_centerline[-1])
+			print("lane switch to connectingLane")
+			select_maneuver = Uniform(*current_lane.maneuvers)
+
+			# assumption: there always will be a maneuver
+			current_centerline = concatenateCenterlines([current_centerline, select_maneuver.connectingLane.centerline, \
+				select_maneuver.endLane.centerline])
+
+			current_lane = select_maneuver.endLane
+			end_lane = current_lane
+
+			if select_maneuver.type != ManeuverType.STRAIGHT:
+				print("entering turning lane")
+				in_turning_lane = True
+			else:
+				print("going straight")
+
+		if (end_lane is not None) and (self.position in end_lane):
+			print("end lane entered")
+			in_turning_lane = False
+			entering_intersection = False 
+
+		# if entering_intersection and (distance from self.position to current_centerline[-1]) < 1:
+		# 	entering_intersection = False
+		# 	in_turning_lane = False
+		# 	print("end of connecting lane reached!")
+		# 	print("entering the endLane")
+		# 	select_maneuver = Uniform(*current_lane.maneuvers)
+		# 	current_lane = select_maneuver.endLane
+		# 	current_centerline = concatenateCenterlines([current_centerline, select_maneuver.connectingLane.centerline, \
+		# 		select_maneuver.endLane.centerline])
+		# 	print("current centerline edge: ", current_centerline[-1])
+			
+		nearest_line_points = current_centerline.nearestSegmentTo(self.position)
 		nearest_line_segment = PolylineRegion(nearest_line_points)
 		cte = nearest_line_segment.signedDistanceTo(self.position)
 		speed_error = target_speed - current_speed
 
 		# compute throttle : Longitudinal Control
 		throttle = _lon_controller.run_step(speed_error)
+		if in_turning_lane:
+			throttle = min(0.4, throttle)
 
 		# compute steering : Latitudinal Control
 		current_steer_angle = _lat_controller.run_step(cte)
+		past_steer_angle = current_steer_angle
+		past_speed = current_speed
+
+		# print(self in current_lane)
 
 		take actions.FollowLaneAction(throttle=throttle, current_steer=current_steer_angle, past_steer=past_steer_angle)
-		past_steer_angle = current_steer_angle
 
 	
 
@@ -114,5 +153,4 @@ behavior FollowTrajectoryBehavior(target_speed = 10, trajectory = None):
 		current_steer_angle = _lat_controller.run_step(cte)
 
 		take actions.FollowLaneAction(throttle=throttle, current_steer=current_steer_angle, past_steer=past_steer_angle)
-		# take actions.FollowLaneAction(throttle=throttle, current_steer=0, past_steer=0)
 		past_steer_angle = current_steer_angle
