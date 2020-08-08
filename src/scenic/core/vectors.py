@@ -278,9 +278,9 @@ class Vector(Samplable, collections.abc.Sequence):
 		dx, dy, dz = other.toVector() - self
 		return normalizeAngle(math.atan2(dy, dx) - (math.pi / 2))
 
-	@vectorOperator
+	@scalarOperator
 	def angleBetween(self, other):
-		return normalizeAngle(math.acos(dotProduct(self,other) / norm(self)*norm(other)) - (math.pi / 2))
+		return normalizeAngle(math.acos(dotProduct(self, other) / norm(self) * norm(other)) - (math.pi / 2))
 
 	def __len__(self):
 		return len(self.coordinates)

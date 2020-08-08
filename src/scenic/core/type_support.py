@@ -8,7 +8,7 @@ import numpy as np
 from scenic.core.distributions import Distribution
 from scenic.core.lazy_eval import (DelayedArgument, valueInContext, requiredProperties,
                                    needsLazyEvaluation, toDelayedArgument)
-from scenic.core.vectors import Vector
+from scenic.core.vectors import Vector, Orientation
 from scenic.core.utils import RuntimeParseError
 
 # Typing and coercion rules:
@@ -70,11 +70,12 @@ def canCoerceType(typeA, typeB):
 			return True
 		return False
 	elif typeB is Heading:
-		if isinstance(typeA, tuple) or isinstance(typeA, list):
+		if typeA is tuple or typeA is list:
 			return True
 		return canCoerceType(typeA, float) or hasattr(typeA, 'toHeading')
 	elif typeB is Vector:
-		if isinstance(typeA, tuple) or isinstance(typeA, list): 
+		breakpoint()
+		if typeA is tuple or typeA is list: 
 			return True
 		return hasattr(typeA, 'toVector')
 	else:
@@ -94,8 +95,8 @@ def coerce(thing, ty):
 	if ty is float:
 		return float(thing)
 	elif ty is Heading:
-		# if isinstance(thing, tuple) or isinstance(thing, list):
-		# 	thing = 
+		if isinstance(thing, tuple) or isinstance(thing, list):
+			thing = Orientation()
 		return thing.toHeading() if hasattr(thing, 'toHeading') else float(thing)
 	elif ty is Vector:
 		if isinstance(thing, tuple) or isinstance(thing, list):

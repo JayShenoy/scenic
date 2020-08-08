@@ -560,6 +560,7 @@ class Peekable:
 	def __init__(self, gen):
 		self.gen = iter(gen)
 		self.current = next(self.gen, None)
+		self.index = 0
 
 	def __iter__(self):
 		return self
@@ -569,6 +570,7 @@ class Peekable:
 		if cur is None:
 			raise StopIteration
 		self.current = next(self.gen, None)
+		self.index += 1
 		return cur
 
 	def peek(self):
@@ -726,16 +728,17 @@ class TokenTranslator:
 				if tstring == 'facing': # Hack-y special case for 3-word construct 
 					nextToken = peek(tokens)
 					if nextToken is not None:
-						nextString = nextToken.string
-						next(tokens) # Consume second word
-						nextNextToken = peek(tokens)
-						if nextNextToken is not None:
+						if nextToken == 'away' or nextToken == 'directly':
 							nextString = nextToken.string
-							nextNextString = nextNextToken.string
-							threeWords = (tstring, nextString, nextNextString)
-							if threeWords in allowedPrefixOps: # 3-word Infix Ops 
-								callFunction(allowedPrefixOps[threeWords])
-								advance() # Consume third word 
+							next(tokens) # Consume second word
+							nextNextToken = peek(tokens)
+							if nextNextToken is not None:
+								nextString = nextToken.string
+								nextNextString = nextNextToken.string
+								threeWords = (tstring, nextString, nextNextString)
+								if threeWords in allowedPrefixOps: # 3-word Infix Ops 
+									callFunction(allowedPrefixOps[threeWords])
+									advance() # Consume third word 
 				# 3-word constructs don't match; try to match 2-word language constructs
 				if not matched:
 					nextToken = peek(tokens)		# lookahead so we can give 2-word ops precedence
