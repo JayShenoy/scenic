@@ -11,15 +11,7 @@ loadNetwork('/home/carla_challenge/Downloads/Town03.xodr')
 from scenic.simulators.carla.model import *
 
 def concatenateCenterlines(centerlines=[]):
-
-	line = []
-	if centerlines != []:
-		for centerline in centerlines:
-			for point in centerline:
-				if point not in line:
-					line.append(point)
-
-	return regionFromShapelyObject(LineString(line))
+	return PolylineRegion.unionAll(centerlines)
 
 def distance(pos1, pos2):
 	""" pos1, pos2 = (x,y) """
@@ -90,6 +82,7 @@ behavior FollowLaneBehavior(target_speed = 10, network = None):
 		nearest_line_points = current_centerline.nearestSegmentTo(self.position)
 		nearest_line_segment = PolylineRegion(nearest_line_points)
 		cte = nearest_line_segment.signedDistanceTo(self.position)
+
 		speed_error = target_speed - current_speed
 
 		# compute throttle : Longitudinal Control
@@ -122,9 +115,7 @@ behavior FollowTrajectoryBehavior(target_speed = 10, trajectory = None):
 		else:
 			current_speed = 0
 
-		nearest_line_points = trajectory_line.nearestSegmentTo(self.position)
-		nearest_line_segment = PolylineRegion(nearest_line_points)
-		cte = nearest_line_segment.signedDistanceTo(self.position)
+		cte = trajectory_line.signedDistanceTo(self.position)
 		speed_error = target_speed - current_speed
 
 		# compute throttle : Longitudinal Control

@@ -100,7 +100,7 @@ class SetThrottleAction(simulators.Action):
 		ctrl = vehicle.get_control()
 		ctrl.throttle = self.throttle
 		vehicle.apply_control(ctrl)
-		print("The applied throttle is: ", vehicle.get_control().throttle)
+		#print("The applied throttle is: ", vehicle.get_control().throttle)
 
 
 class SetSteerAction(simulators.Action):
@@ -321,6 +321,7 @@ class FollowLaneAction(simulators.Action):
 		# print("steer: ", steering)
 		# print("throttle: ", control.throttle)
 		# print("brake: ", control.brake)
+
 		control.steer = steering
 		control.hand_brake = False
 		control.manual_gear_shift = False
@@ -349,7 +350,7 @@ class PIDLongitudinalController():
 		self._k_i = K_I
 		self._dt = dt
 		self._error_buffer = deque(maxlen=10)
-		print("PIDLongitudinalController Instantiated")
+		#print("PIDLongitudinalController Instantiated")
 
 	def run_step(self, speed_error, debug=False):
 		"""
@@ -399,7 +400,7 @@ class PIDLateralController():
 		self.current_time = time.time()
 		self.last_time = self.current_time
 		self.output = 0
-		print("PIDLateralController Instantiated")
+		#print("PIDLateralController Instantiated")
 
 	def run_step(self, cte):
 		"""
