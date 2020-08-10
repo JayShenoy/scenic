@@ -2,11 +2,11 @@
 import pytest
 import numpy as np
 
-from scenic.syntax.translator import InterpreterParseError
+from scenic.core.errors import RuntimeParseError
 from tests.utils import compileScenic, sampleEgoFrom
 
 def test_position_wrong_type():
-    with pytest.raises(InterpreterParseError):
+    with pytest.raises(RuntimeParseError):
         compileScenic('ego = Object with position 4')
 
 def test_position_oriented_point():
@@ -24,7 +24,7 @@ def test_position_numpy_types():
     assert tuple(ego.position) == pytest.approx((3.4, 7))
 
 def test_heading_wrong_type():
-    with pytest.raises(InterpreterParseError):
+    with pytest.raises(RuntimeParseError):
         compileScenic('ego = Object with heading 4 @ 1')
 
 def test_heading_numpy_types():
@@ -33,3 +33,10 @@ def test_heading_numpy_types():
         ego = Object with heading np.single(3.4)
     """)
     assert ego.heading == pytest.approx(3.4)
+
+def test_left():
+    ego = sampleEgoFrom("""
+        other = Object with width 4
+        ego = Object at other.left offset by 0@5
+    """)
+    assert tuple(ego.position) == pytest.approx((-2, 5))

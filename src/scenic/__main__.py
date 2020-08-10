@@ -9,7 +9,8 @@ import random
 import os
 
 import scenic.syntax.translator as translator
-from scenic.simulators import SimulationCreationError
+import scenic.core.errors as errors
+from scenic.core.simulators import SimulationCreationError
 
 parser = argparse.ArgumentParser(prog='scenic',
                                  usage='scenic [-h] [options] scenario',
@@ -52,7 +53,7 @@ parser.add_argument('scenario', help='a Scenic file to run')
 # Parse arguments and set up configuration
 args = parser.parse_args()
 delay = args.delay
-translator.showInternalBacktrace = args.full_backtrace
+errors.showInternalBacktrace = args.full_backtrace
 translator.dumpTranslatedPython = args.dump_initial_python
 translator.dumpFinalAST = args.dump_ast
 translator.dumpASTPython = args.dump_python
@@ -65,13 +66,17 @@ if args.seed is not None:
 # Load scenario from file
 print('Beginning scenario construction...')
 startTime = time.time()
-scenario = translator.scenarioFromFile(args.scenario)
+scenario = errors.callBeginningScenicTrace(
+    lambda: translator.scenarioFromFile(args.scenario)
+)
 totalTime = time.time() - startTime
 print(f'Scenario constructed in {totalTime:.2f} seconds.')
 
 def generateScene():
     startTime = time.time()
-    scene, iterations = scenario.generate(verbosity=args.verbosity)
+    scene, iterations = errors.callBeginningScenicTrace(
+        lambda: scenario.generate(verbosity=args.verbosity)
+    )
     if args.verbosity >= 1:
         totalTime = time.time() - startTime
         print(f'  Generated scene in {iterations} iterations, {totalTime:.4g} seconds.')
@@ -82,9 +87,13 @@ def runSimulation(scene, output_path):
     if args.verbosity >= 1:
         print('  Beginning simulation...')
     try:
-        _, simulation = scene.simulate(maxSteps=args.time, verbosity=args.verbosity)
+        errors.callBeginningScenicTrace(
+            lambda: scene.simulate(maxSteps=args.time, verbosity=args.verbosity)
+        )
+
         if args.record:
             simulation.save_videos(output_path)
+            
     except SimulationCreationError as e:
         if args.verbosity >= 1:
             print(f'  Failed to create simulation: {e}')

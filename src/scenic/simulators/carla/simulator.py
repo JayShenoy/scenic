@@ -6,11 +6,12 @@ except ImportError as e:
 
 import pygame
 
-import scenic.simulators as simulators
+import scenic.core.simulators as simulators
 import scenic.simulators.carla.utils.utils as utils
 import scenic.simulators.carla.utils.visuals as visuals
 import scenic.simulators.carla.utils.bounding_boxes as bb
 import time
+
 
 import numpy as np
 import json
