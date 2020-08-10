@@ -139,11 +139,6 @@ def vectorDistributionMethod(method):
 			return method(self, *args, **kwargs)
 	return helper
 
-def orientationOperator(method):
-	"""Decorator for orientation operators that yield orientations."""
-	op = method.__name__
-	setattr()
-
 class Orientation():
 	"""A quaternion representation of an orientation whose rotation axis and angle can be distributions."""
 	def __init__(self, q):
@@ -184,26 +179,14 @@ class Orientation():
 		return self.orientation[index]
 
 	def rotate_vector(self, v):
-		return self.orientation.rotate(Quaternion(vector=(v))) #TODO: Convert to vector. This returns Quaternion object
+		rot_quat = self.orientation.rotate(Quaternion(vector=(v))) #TODO: Convert to vector. This returns Quaternion object
+		return Vector(rot_quat[1], rot_quat[2], rot_quat[3])
 
 	def get_rotation_axis(self):
 		return self.orientation.axis
 
 	def get_rotation_angle_radians(self):
 		return self.orientation.radians
-
-	def get_inverse(self):
-		return self.orientation.inverse
-
-	def get_conjugate(self):
-		# For a unit quaternion this is the same as get_inverse().
-		return self.orientation.conjugate
-
-	def get_norm(self):
-		return self.orientation.norm
-
-	def get_normalised(self):
-		return self.orientation.unit
 
 	def __repr__(self):
 		return repr(self.orientation)

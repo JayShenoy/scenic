@@ -83,7 +83,7 @@ def canCoerceType(typeA, typeB):
 def canCoerce(thing, ty):
 	"""Can this value be coerced into the given type?"""
 	# TODO: @Matthew Add special case for tuples/list 
-	tt = underlyingType(thing) 
+	tt = underlyingType(thing)
 	return canCoerceType(tt, ty)
 
 def coerce(thing, ty):
@@ -95,7 +95,8 @@ def coerce(thing, ty):
 		return float(thing)
 	elif ty is Heading:
 		if isinstance(thing, tuple) or isinstance(thing, list):
-			thing = Orientation()
+			thing = Orientation() # TODO: @Matthew Implement 
+			return thing.toHeading
 		return thing.toHeading() if hasattr(thing, 'toHeading') else float(thing)
 	elif ty is Vector:
 		if isinstance(thing, tuple) or isinstance(thing, list):

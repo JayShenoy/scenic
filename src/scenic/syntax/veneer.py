@@ -206,6 +206,7 @@ def Visible(region):
 	"""The 'visible <region>' operator."""
 	if not isinstance(region, Region):
 		raise RuntimeParseError('"visible X" with X not a Region')
+	# TODO: @Matthew ego().visibleRegion may be 3D
 	return region.intersect(ego().visibleRegion)
 
 # front of <object>, etc.
@@ -474,7 +475,7 @@ def Facing(heading):
 	"""
 	if isinstance(heading, VectorField):
 		return Specifier('heading', DelayedArgument({'position'},
-		                                            lambda self: heading[self.position]))
+		                                            lambda self, specifier: heading[self.position]))
 	else:
 		heading = toHeading(heading, 'specifier "facing X" with X not a heading or vector field')
 		return Specifier('heading', heading)
@@ -482,16 +483,16 @@ def Facing(heading):
 def FacingToward(pos):
 	"""The 'facing toward <vector>' specifier.
 
-	Specifies 'heading', depending on 'position'.
+	Specifies the yaw angle of 'heading', depending on 'position'.
 	"""
 	pos = toVector(pos, 'specifier "facing toward X" with X not a vector')
 	return Specifier('heading', DelayedArgument({'position'},
-	                                            lambda self: self.position.angleTo(pos)))
+	                                            lambda self, specifier: self.position.angleTo(pos)))
 
 def FacingDirectlyToward(pos):
 	"""The 'facing directly toward <vector>' specifier.
 
-	Specifies yaw angle of 'heading', depending on 'position'.
+	Specifies yaw and pitch angles of 'heading', depending on 'position'.
 	"""
 	return NotImplemented
 
@@ -502,7 +503,7 @@ def FacingAwayFrom(pos):
 	"""
 	pos = toVector(pos, 'specifier "facing away from X" with X not a vector')
 	return Specifier('heading', DelayedArgument({'position'},
-												lambda self: pos.angleTo(self.position)))
+												lambda self, specifer: pos.angleTo(self.position)))
 
 def ApparentlyFacing(heading, fromPt=None):
 	"""The 'apparently facing <heading> [from <vector>]' specifier.

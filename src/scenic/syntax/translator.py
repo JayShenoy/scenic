@@ -325,6 +325,8 @@ prefixOperators = {
 	('back',): 'Back',
 	('left',): 'Left',
 	('right',): 'Right',
+	('above'): 'Above',
+	('below'): 'Below',
 	('follow',): 'Follow',
 	('visible',): 'Visible'
 }
