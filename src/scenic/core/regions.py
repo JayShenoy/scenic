@@ -317,7 +317,7 @@ class RectangularRegion(RotatedRectangle, Region):
 		return self.orient(pt)
 
 	def getAABB(self):
-		x, y = zip(*self.corners)
+		x, y, z = zip(*self.corners)
 		minx, maxx = findMinMax(x)
 		miny, maxy = findMinMax(y)
 		return ((minx, miny), (maxx, maxy))
@@ -658,7 +658,7 @@ class GridRegion(PointSetRegion):
 		return ((self.Ax * x) + self.Bx, (self.Ay * y) + self.By)
 
 	def pointToGrid(self, point):
-		x, y = point
+		x, y, z = point
 		x = (x - self.Bx) / self.Ax
 		y = (y - self.By) / self.Ay
 		nx = int(round(x))

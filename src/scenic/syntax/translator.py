@@ -728,7 +728,7 @@ class TokenTranslator:
 				if tstring == 'facing': # Hack-y special case for 3-word construct 
 					nextToken = peek(tokens)
 					if nextToken is not None:
-						if nextToken == 'away' or nextToken == 'directly':
+						if nextToken.string == 'away' or nextToken.string == 'directly':
 							nextString = nextToken.string
 							next(tokens) # Consume second word
 							nextNextToken = peek(tokens)

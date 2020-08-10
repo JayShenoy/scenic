@@ -439,11 +439,11 @@ class Object(OrientedPoint, RotatedRectangle):
 			for angle in (-ha, ha):
 				p = camera.offsetRadially(20, self.heading + angle)
 				edge = [cpos, workspace.scenicToSchematicCoords(p)]
-				x, y = zip(*edge)
+				x, y, z = zip(*edge)
 				plt.plot(x, y, 'b:')
 
 		corners = [workspace.scenicToSchematicCoords(corner) for corner in self.corners]
-		x, y = zip(*corners)
+		x, y, z = zip(*corners)
 		color = self.color if hasattr(self, 'color') else (1, 0, 0)
 		plt.fill(x, y, color=color)
 

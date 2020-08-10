@@ -74,7 +74,6 @@ def canCoerceType(typeA, typeB):
 			return True
 		return canCoerceType(typeA, float) or hasattr(typeA, 'toHeading')
 	elif typeB is Vector:
-		breakpoint()
 		if typeA is tuple or typeA is list: 
 			return True
 		return hasattr(typeA, 'toVector')
