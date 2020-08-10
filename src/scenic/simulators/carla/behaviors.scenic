@@ -6,8 +6,8 @@ from scenic.core.regions import regionFromShapelyObject
 from shapely.geometry import LineString
 import math
 
-from scenic.simulators.domains.driving.network import loadNetwork
-loadNetwork('/home/carla_challenge/Downloads/Town03.xodr')
+# from scenic.simulators.domains.driving.network import loadNetwork
+# loadNetwork('/home/carla_challenge/Downloads/Town03.xodr')
 from scenic.simulators.carla.model import *
 
 def concatenateCenterlines(centerlines=[]):
@@ -39,9 +39,8 @@ behavior WalkForwardBehavior():
 behavior ConstantThrottleBehavior(x):
     take actions.SetThrottleAction(x)
 
-
-behavior FollowLaneBehavior(target_speed = 10, network = None):
-	assert network is not None
+behavior FollowLaneBehavior(target_speed = 10):
+	# assert network is not None
 
 	# instantiate longitudinal and latitudinal pid controllers
 	_lon_controller = actions.PIDLongitudinalController(self)
@@ -53,6 +52,9 @@ behavior FollowLaneBehavior(target_speed = 10, network = None):
 	in_turning_lane = False # assumption that the agent is not instantiated within a connecting lane
 	entering_intersection = False # assumption that the agent is not instantiated within an intersection
 	end_lane = None
+	original_target_speed = target_speed
+	TARGET_SPEED_FOR_TURNING = 7 # KM/H
+	TRIGGER_DISTANCE_TO_SLOWDOWN = 30 # FOR TURNING AT INTERSECTIONS
 
 	while True:
 
@@ -61,23 +63,30 @@ behavior FollowLaneBehavior(target_speed = 10, network = None):
 		else:
 			current_speed = past_speed
 
-		if not entering_intersection and (distance from self.position to current_centerline[-1]) < 20 :
+		if not entering_intersection and (distance from self.position to current_centerline[-1]) < TRIGGER_DISTANCE_TO_SLOWDOWN:
+		# if not entering_intersection and (distance from self.position to intersection) < TRIGGER_DISTANCE_TO_SLOWDOWN:
 			entering_intersection = True
 			select_maneuver = Uniform(*current_lane.maneuvers)
 
 			# assumption: there always will be a maneuver
-			current_centerline = concatenateCenterlines([current_centerline, select_maneuver.connectingLane.centerline, \
-				select_maneuver.endLane.centerline])
+			if select_maneuver.connectingLane != None:
+				current_centerline = concatenateCenterlines([current_centerline, select_maneuver.connectingLane.centerline, \
+					select_maneuver.endLane.centerline])
+			else:
+				current_centerline = concatenateCenterlines([current_centerline, select_maneuver.endLane.centerline])
 
 			current_lane = select_maneuver.endLane
 			end_lane = current_lane
 
 			if select_maneuver.type != ManeuverType.STRAIGHT:
 				in_turning_lane = True
+				target_speed = TARGET_SPEED_FOR_TURNING
+
 
 		if (end_lane is not None) and (self.position in end_lane):
 			in_turning_lane = False
 			entering_intersection = False 
+			target_speed = original_target_speed
 			
 		nearest_line_points = current_centerline.nearestSegmentTo(self.position)
 		nearest_line_segment = PolylineRegion(nearest_line_points)
@@ -87,8 +96,6 @@ behavior FollowLaneBehavior(target_speed = 10, network = None):
 
 		# compute throttle : Longitudinal Control
 		throttle = _lon_controller.run_step(speed_error)
-		if in_turning_lane:
-			throttle = min(0.4, throttle)
 
 		# compute steering : Latitudinal Control
 		current_steer_angle = _lat_controller.run_step(cte)
@@ -98,7 +105,6 @@ behavior FollowLaneBehavior(target_speed = 10, network = None):
 		take actions.FollowLaneAction(throttle=throttle, current_steer=current_steer_angle, past_steer=past_steer_angle)
 
 	
-
 behavior FollowTrajectoryBehavior(target_speed = 10, trajectory = None):
 	assert trajectory is not None
 
@@ -126,3 +132,8 @@ behavior FollowTrajectoryBehavior(target_speed = 10, trajectory = None):
 
 		take actions.FollowLaneAction(throttle=throttle, current_steer=current_steer_angle, past_steer=past_steer_angle)
 		past_steer_angle = current_steer_angle
+
+
+
+behavior PedestrianWalkTowards(goal_position):
+	assert goal_position is not None

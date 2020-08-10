@@ -102,7 +102,7 @@ class CarlaSimulation(simulators.Simulation):
 				self.ego = obj
 
 				# Setup camera manager and collision sensor for ego
-				if self.render:
+				if self.render and isinstance(obj.carlaActor, carla.Vehicle):
 					camIndex = 0
 					camPosIndex = 0
 					self.cameraManager = visuals.CameraManager(self.world, carlaActor, self.hud)

@@ -31,6 +31,10 @@ import numpy as np
 import carla
 from carla import ColorConverter as cc
 
+import cv2
+import json
+
+import scenic.simulators.carla.utils.bounding_boxes as bb
 
 def get_actor_display_name(actor, truncate=250):
     name = ' '.join(actor.type_id.replace('_', '.').title().split('.')[1:])
@@ -248,7 +252,12 @@ class CameraManager(object):
 		self._actor = actor
 		self._hud = hud
 		self._recording = True
+
+		# Store camera images, lidar points, and sensor transforms for each step
 		self.images = []
+		self.lidar_points = []
+		self.transform_for_step = []
+
 		self._camera_transforms = [
 			carla.Transform(carla.Location(x=-5.5, z=2.8), carla.Rotation(pitch=-15)),
 			carla.Transform(carla.Location(x=1.6, z=1.7))]
@@ -308,6 +317,10 @@ class CameraManager(object):
 		if self._sensors[self._index][0].startswith('sensor.lidar'):
 			points = np.frombuffer(image.raw_data, dtype=np.dtype('f4'))
 			points = np.reshape(points, (int(points.shape[0] / 3), 3))
+
+			# Store lidar points
+			self.lidar_points.append(points)
+
 			lidar_data = np.array(points[:, :2])
 			lidar_data *= min(self._hud.dim) / 100.0
 			lidar_data += (0.5 * self._hud.dim[0], 0.5 * self._hud.dim[1])
@@ -328,3 +341,29 @@ class CameraManager(object):
 		if self._recording:
 			image.save_to_disk('_out/%08d' % image.frame)
 		self.images.append(image)
+		self.transform_for_step.append(self.sensor.get_transform())
+
+	def save_video(self, filepath):
+		if len(self.images) == 0:
+			print('Tried to save video, but no frames have been recorded')
+			return
+
+		frame_width = self.images[0].width
+		frame_height = self.images[0].height
+
+		out = cv2.VideoWriter(
+			filepath,
+			cv2.VideoWriter_fourcc(*'mp4v'),
+			30.0,
+			(frame_width, frame_height),
+			True
+		)
+
+		for frame in self.images:
+			frame_array = np.frombuffer(frame.raw_data, dtype=np.dtype("uint8"))
+			frame_array = np.reshape(frame_array, (frame.height, frame.width, 4))
+			frame_array = frame_array[:, :, :3]
+						
+			out.write(frame_array)
+
+		out.release()

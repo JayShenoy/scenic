@@ -2,7 +2,7 @@
 
 ## Vehicle blueprints
 
-carModels = {# for speed = 10,  # Lateral PID:  K_P=0.3, K_D=0.2, K_I=0
+carModels = {# for speed = 10, #Longitudinal: K_P=0.5, K_D=0.1, K_I=0.7 /  # Lateral PID:  K_P=0.3, K_D=0.2, K_I=0
       # 'vehicle.audi.a2', ## not for lanechange
       'vehicle.audi.etron', ## not for lanechange
       'vehicle.audi.tt', ## not for lanechange
@@ -15,7 +15,7 @@ carModels = {# for speed = 10,  # Lateral PID:  K_P=0.3, K_D=0.2, K_I=0
       # 'vehicle.jeep.wrangler_rubicon',  # current PID controller not work 
       'vehicle.lincoln.mkz2017',
       # 'vehicle.mercedes-benz.coupe',
-      'vehicle.mini.cooperst',
+      # 'vehicle.mini.cooperst',
       'vehicle.nissan.micra',
       'vehicle.nissan.patrol',
       'vehicle.seat.leon',
@@ -24,19 +24,19 @@ carModels = {# for speed = 10,  # Lateral PID:  K_P=0.3, K_D=0.2, K_I=0
       'vehicle.volkswagen.t2'
 }
 
-bicycleModels = {
-      'vehicle.bh.crossbike',
-      'vehicle.diamondback.century',
-      'vehicle.gazelle.omafiets',
+bicycleModels = {# Speed 10 : Longitudinal : K_P=0.25, K_D=0.025, K_I=0.0 
+      'vehicle.bh.crossbike', # Lateral :  K_P=0.2, K_D=0.1, K_I=0.0
+      'vehicle.diamondback.century', # Lateral :  K_P=0.2, K_D=0.1, K_I=0.0
+      'vehicle.gazelle.omafiets', # Lateral :  K_P=0.2, K_D=0.1, K_I=0.0
 }
 
-motorcycleModels = {
-      'vehicle.harley-davidson.low_rider',
-      'vehicle.kawasaki.ninja',
-      'vehicle.yamaha.yzf',
+motorcycleModels = {# Speed 10 : Longitudinal : K_P=0.25, K_D=0.025, K_I=0.0 / Lateral :  K_P=0.3, K_D=0.17, K_I=0.001
+      'vehicle.harley-davidson.low_rider', # Lateral :  K_P=0.2, K_D=0.1, K_I=0.0
+      'vehicle.kawasaki.ninja', # Lateral :  K_P=0.2, K_D=0.1, K_I=0.0
+      'vehicle.yamaha.yzf', # Lateral :  K_P=0.2, K_D=0.1, K_I=0.0
 }
 
-truckModels = {
+truckModels = {# for speed = 10, #Longitudinal: K_P=0.5, K_D=0.1, K_I=0.7 /  # Lateral PID:  K_P=0.3, K_D=0.2, K_I=0
       'vehicle.carlamotors.carlacola',
       'vehicle.tesla.cybertruck'
 }

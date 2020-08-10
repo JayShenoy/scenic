@@ -48,14 +48,14 @@ class SetVelocityAction(simulators.Action):
 		carlaActor.set_velocity(newVel) 
 
 
-class SetSpeedAction(simulators.Action):
-	def __init__(self, speed):
-		super().__init__()
-		self.speed = speed
+# class SetSpeedAction(simulators.Action):
+# 	def __init__(self, speed):
+# 		super().__init__()
+# 		self.speed = speed
 
-	def applyTo(self, obj, carlaActor, sim):
-		newVel = utils.scenicSpeedToCarlaVelocity(speed, carlaActor.heading)
-		carlaActor.set_velocity(newVel)
+# 	def applyTo(self, obj, carlaActor, sim):
+# 		newVel = utils.scenicSpeedToCarlaVelocity(speed, carlaActor.heading)
+# 		carlaActor.set_velocity(newVel)
 
 
 class SetAngularVelocityAction(simulators.Action):
@@ -231,8 +231,10 @@ class SetSpeedAction(simulators.Action):
 			'Speed must be a non-negative float.'
 		super().__init__()
 		self.speed = speed  # float
+		# print("SetSpeedAction called")
 
 	def applyTo(self, obj, walker, sim):
+		print("applied control to the walker")
 		ctrl = walker.get_control()
 		ctrl.speed = self.speed
 		walker.apply_control(ctrl)
@@ -318,9 +320,9 @@ class FollowLaneAction(simulators.Action):
 		else:
 		    steering = max(-self.max_steer, self.current_steer)
 
-		# print("steer: ", steering)
-		# print("throttle: ", control.throttle)
-		# print("brake: ", control.brake)
+		print("steer: ", steering)
+		print("throttle: ", control.throttle)
+		print("brake: ", control.brake)
 
 		control.steer = steering
 		control.hand_brake = False
@@ -334,7 +336,7 @@ class PIDLongitudinalController():
 	"""
 
 
-	def __init__(self, vehicle, K_P=0.5, K_D=0.1, K_I=0.7, dt=0.1):
+	def __init__(self, vehicle, K_P=0.25, K_D=0.025, K_I=0.0, dt=0.1):
 		"""
 		Constructor method.
 
@@ -377,7 +379,7 @@ class PIDLateralController():
 	"""
 
 
-	def __init__(self, vehicle, K_P=0.3, K_D=0.2, K_I=0.0, dt=0.1):
+	def __init__(self, vehicle, K_P=0.2, K_D=0.1, K_I=0.0, dt=0.1):
 		"""
 		Constructor method. 0.0000005
 
