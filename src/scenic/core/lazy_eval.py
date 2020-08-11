@@ -38,7 +38,7 @@ class DelayedArgument(LazilyEvaluable):
 		self.value = value
 		super().__init__(requiredProps)
 
-	def evaluateInner(self, context):
+	def evaluateInner(self, context): # TODO: @Matthew Call with list of specifiers 
 		return self.value(context)
 
 	def __getattr__(self, name):

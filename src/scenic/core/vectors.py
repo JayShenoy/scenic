@@ -179,7 +179,7 @@ class Orientation():
 		return self.orientation[index]
 
 	def rotate_vector(self, v):
-		rot_quat = self.orientation.rotate(Quaternion(vector=(v))) #TODO: Convert to vector. This returns Quaternion object
+		rot_quat = self.orientation.rotate(Quaternion(vector=(v))) 
 		return Vector(rot_quat[1], rot_quat[2], rot_quat[3])
 
 	def get_rotation_axis(self):

@@ -268,7 +268,7 @@ pointSpecifiers = {
 	('offset', 'along'): 'OffsetAlongSpec',
 	('at',): 'At',
 	('in',): 'In',
-	('on',): 'In',
+	('on',): 'On',
 	('beyond',): 'Beyond',
 	('visible',): 'VisibleSpec',
 	('left', 'of'): 'LeftSpec',
@@ -325,8 +325,8 @@ prefixOperators = {
 	('back',): 'Back',
 	('left',): 'Left',
 	('right',): 'Right',
-	('above'): 'Above',
-	('below'): 'Below',
+	('above',): 'Above',
+	('below',): 'Below',
 	('follow',): 'Follow',
 	('visible',): 'Visible'
 }

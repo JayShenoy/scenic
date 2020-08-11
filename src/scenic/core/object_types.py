@@ -68,7 +68,7 @@ class Constructible(Samplable):
 		for spec in specifiers:
 			assert isinstance(spec, Specifier), (name, spec)
 			prop = spec.property
-			if prop in properties:
+			if prop in properties: # TODO: @Matthew Relax this condition. 
 				raise RuntimeParseError(f'property "{prop}" of {name} specified twice')
 			properties[prop] = spec
 			for opt in spec.optionals:
@@ -121,7 +121,7 @@ class Constructible(Samplable):
 
 		# Evaluate and apply specifiers
 		for spec in order:
-			spec.applyTo(self, optionalsForSpec[spec])
+			spec.applyTo(self, optionalsForSpec[spec]) # TODO: @Matthew pass order (the list of specs) into here
 
 		# Set up dependencies
 		deps = []
@@ -306,7 +306,8 @@ class OrientedPoint(Point):
 		viewAngle (float): View cone angle for ``can see`` operator. Default
 		  value :math:`2\\pi`.
 	"""
-	#TODO: @Matthew Do OrientedPoints need Orientation instead of just a scalar heading? 
+	# TODO: @Matthew Do OrientedPoints need Orientation instead of just a scalar heading? 
+	# TODO: @Matthew Heading is derived from Orientation 
 	heading: 0
 	viewAngle: math.tau
 
@@ -439,11 +440,11 @@ class Object(OrientedPoint, RotatedRectangle):
 			for angle in (-ha, ha):
 				p = camera.offsetRadially(20, self.heading + angle)
 				edge = [cpos, workspace.scenicToSchematicCoords(p)]
-				x, y, z = zip(*edge)
+				x, y = zip(*edge)
 				plt.plot(x, y, 'b:')
 
 		corners = [workspace.scenicToSchematicCoords(corner) for corner in self.corners]
-		x, y, z = zip(*corners)
+		x, y = zip(*corners)
 		color = self.color if hasattr(self, 'color') else (1, 0, 0)
 		plt.fill(x, y, color=color)
 

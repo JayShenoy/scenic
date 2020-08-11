@@ -25,7 +25,7 @@ class Specifier:
 		self.requiredProperties = deps
 		self.optionals = optionals
 
-	def applyTo(self, obj, optionals):
+	def applyTo(self, obj, optionals): # TODO: @Matthew list of specs come into here 
 		"""Apply specifier to an object, including the specified optional properties."""
 		val = self.value.evaluateIn(obj)
 		val = toDistribution(val)
@@ -37,6 +37,10 @@ class Specifier:
 
 	def __str__(self):
 		return f'<Specifier of {self.property}>'
+
+class ModifiableSpecifier(Specifier):
+	def __init__(self, prop, value, deps=None, optionals={}):
+		super.__init__(self, prop, value, deps, optionals)
 
 ## Support for property defaults
 

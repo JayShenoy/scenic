@@ -28,9 +28,9 @@ __all__ = (
 	'Point', 'OrientedPoint', 'Object',
 	# Specifiers
 	'With',
-	'At', 'In', 'Beyond', 'VisibleFrom', 'VisibleSpec', 'OffsetBy', 'OffsetAlongSpec',
+	'At', 'In', 'On', 'Beyond', 'VisibleFrom', 'VisibleSpec', 'OffsetBy', 'OffsetAlongSpec',
 	'Facing', 'FacingToward', 'ApparentlyFacing', 'FacingDirectlyToward', 'FacingAwayFrom',
-	'LeftSpec', 'RightSpec', 'Ahead', 'Behind',
+	'LeftSpec', 'RightSpec', 'Ahead', 'Behind', 'Above', 'Below',
 	'Following',
 	# Constants
 	'everywhere', 'nowhere',
@@ -386,12 +386,28 @@ def At(pos):
 	return Specifier('position', pos)
 
 def In(region):
-	"""The 'in/on <region>' specifier.
+	"""The 'in <region>' specifier.
 
 	Specifies 'position', with no dependencies. Optionally specifies 'heading'
 	if the given Region has a preferred orientation.
 	"""
-	region = toType(region, Region, 'specifier "in/on R" with R not a Region')
+	region = toType(region, Region, 'specifier "in R" with R not a Region')
+	extras = {'heading'} if alwaysProvidesOrientation(region) else {}
+	return Specifier('position', Region.uniformPointIn(region), optionals=extras)
+
+def On(region):
+	"""The 'on <region> specifier.
+
+	Specifies 'position', with no dependencies. Optionally specifies 'heading'
+	if the given Region has a preferred orientation. May also be composed with
+	a position specifier, with the exception of 'at <vector>', to together
+	define the single 'position' property. 
+
+	Allowed forms:
+		on <region>
+		on <object> 
+	"""
+	region = toType(region, Region, 'specifier "on R" with R not a Region')
 	extras = {'heading'} if alwaysProvidesOrientation(region) else {}
 	return Specifier('position', Region.uniformPointIn(region), optionals=extras)
 
@@ -475,7 +491,7 @@ def Facing(heading):
 	"""
 	if isinstance(heading, VectorField):
 		return Specifier('heading', DelayedArgument({'position'},
-		                                            lambda self, specifier: heading[self.position]))
+		                                            lambda self: heading[self.position]))
 	else:
 		heading = toHeading(heading, 'specifier "facing X" with X not a heading or vector field')
 		return Specifier('heading', heading)
@@ -486,8 +502,8 @@ def FacingToward(pos):
 	Specifies the yaw angle of 'heading', depending on 'position'.
 	"""
 	pos = toVector(pos, 'specifier "facing toward X" with X not a vector')
-	return Specifier('heading', DelayedArgument({'position'},
-	                                            lambda self, specifier: self.position.angleTo(pos)))
+	return Specifier('heading', DelayedArgument({'position'}, # Depend on 'roll' 
+	                                            lambda self: self.position.angleTo(pos)))
 
 def FacingDirectlyToward(pos):
 	"""The 'facing directly toward <vector>' specifier.
@@ -503,7 +519,7 @@ def FacingAwayFrom(pos):
 	"""
 	pos = toVector(pos, 'specifier "facing away from X" with X not a vector')
 	return Specifier('heading', DelayedArgument({'position'},
-												lambda self, specifer: pos.angleTo(self.position)))
+												lambda self: pos.angleTo(self.position)))
 
 def ApparentlyFacing(heading, fromPt=None):
 	"""The 'apparently facing <heading> [from <vector>]' specifier.
