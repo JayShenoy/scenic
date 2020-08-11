@@ -121,7 +121,7 @@ class Constructible(Samplable):
 
 		# Evaluate and apply specifiers
 		for spec in order:
-			spec.applyTo(self, optionalsForSpec[spec]) # TODO: @Matthew pass order (the list of specs) into here
+			spec.applyTo(self, order, optionalsForSpec[spec]) # TODO: @Matthew pass order (the list of specs) into here
 
 		# Set up dependencies
 		deps = []

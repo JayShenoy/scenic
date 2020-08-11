@@ -25,9 +25,9 @@ class Specifier:
 		self.requiredProperties = deps
 		self.optionals = optionals
 
-	def applyTo(self, obj, optionals): # TODO: @Matthew list of specs come into here 
+	def applyTo(self, obj, specs, optionals): # TODO: @Matthew list of specs come into here 
 		"""Apply specifier to an object, including the specified optional properties."""
-		val = self.value.evaluateIn(obj)
+		val = self.value.evaluateIn(obj, specs)
 		val = toDistribution(val)
 		assert not needsLazyEvaluation(val)
 		setattr(obj, self.property, val)

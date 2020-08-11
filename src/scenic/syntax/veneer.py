@@ -491,7 +491,7 @@ def Facing(heading):
 	"""
 	if isinstance(heading, VectorField):
 		return Specifier('heading', DelayedArgument({'position'},
-		                                            lambda self: heading[self.position]))
+		                                            lambda self, specifier: heading[self.position]))
 	else:
 		heading = toHeading(heading, 'specifier "facing X" with X not a heading or vector field')
 		return Specifier('heading', heading)
@@ -503,7 +503,7 @@ def FacingToward(pos):
 	"""
 	pos = toVector(pos, 'specifier "facing toward X" with X not a vector')
 	return Specifier('heading', DelayedArgument({'position'}, # Depend on 'roll' 
-	                                            lambda self: self.position.angleTo(pos)))
+	                                            lambda self, specifier: self.position.angleTo(pos)))
 
 def FacingDirectlyToward(pos):
 	"""The 'facing directly toward <vector>' specifier.
@@ -519,7 +519,7 @@ def FacingAwayFrom(pos):
 	"""
 	pos = toVector(pos, 'specifier "facing away from X" with X not a vector')
 	return Specifier('heading', DelayedArgument({'position'},
-												lambda self: pos.angleTo(self.position)))
+												lambda self, specifer: pos.angleTo(self.position)))
 
 def ApparentlyFacing(heading, fromPt=None):
 	"""The 'apparently facing <heading> [from <vector>]' specifier.

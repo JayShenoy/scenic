@@ -14,13 +14,13 @@ class LazilyEvaluable:
 		self._dependencies = ()		# TODO improve?
 		self._requiredProperties = set(requiredProps)
 
-	def evaluateIn(self, context):
+	def evaluateIn(self, context, specifiers):
 		"""Evaluate this value in the context of an object being constructed.
 
 		The object must define all of the properties on which this value depends.
 		"""
 		assert all(hasattr(context, prop) for prop in self._requiredProperties)
-		value = self.evaluateInner(context)
+		value = self.evaluateInner(context, specifiers)
 		assert not needsLazyEvaluation(value)	# value should not require further evaluation
 		return value
 
@@ -38,12 +38,14 @@ class DelayedArgument(LazilyEvaluable):
 		self.value = value
 		super().__init__(requiredProps)
 
-	def evaluateInner(self, context): # TODO: @Matthew Call with list of specifiers 
-		return self.value(context)
+	def evaluateInner(self, context, specifiers): # TODO: @Matthew Call with list of specifiers 
+		breakpoint()
+		# TODO: @Matthew Check for number of parameters 
+		return self.value(context, specifiers)
 
 	def __getattr__(self, name):
 		return DelayedArgument(self._requiredProperties,
-			lambda context: getattr(self.evaluateIn(context), name))
+			lambda context, specifier: getattr(self.evaluateIn(context), name))
 
 	def __call__(self, *args, **kwargs):
 		dargs = [toDelayedArgument(arg) for arg in args]
@@ -110,7 +112,7 @@ def valueInContext(value, context):
 def toDelayedArgument(thing):
 	if isinstance(thing, DelayedArgument):
 		return thing
-	return DelayedArgument(set(), lambda context: thing)
+	return DelayedArgument(set(), lambda context, specifier: thing)
 
 def requiredProperties(thing):
 	if hasattr(thing, '_requiredProperties'):
