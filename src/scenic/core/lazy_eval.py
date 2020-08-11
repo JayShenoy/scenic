@@ -39,7 +39,6 @@ class DelayedArgument(LazilyEvaluable):
 		super().__init__(requiredProps)
 
 	def evaluateInner(self, context, specifiers): # TODO: @Matthew Call with list of specifiers 
-		breakpoint()
 		# TODO: @Matthew Check for number of parameters 
 		return self.value(context, specifiers)
 
