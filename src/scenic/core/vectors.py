@@ -326,7 +326,7 @@ class PolygonalVectorField(VectorField):
 	def __init__(self, name, cells, headingFunction=None, defaultHeading=None):
 		self.cells = tuple(cells)
 		if headingFunction is None and defaultHeading is not None:
-			headingFunction = lambda pos: defaultHeading
+			headingFunction = lambda pos, specifier: defaultHeading
 		self.headingFunction = headingFunction
 		for cell, heading in self.cells:
 			if heading is None and headingFunction is None and defaultHeading is None:

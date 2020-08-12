@@ -925,14 +925,14 @@ noArgs = ast.arguments(
 	args=[], vararg=None,
 	kwonlyargs=[], kw_defaults=[],
 	kwarg=None, defaults=[])
-selfArg = ast.arguments(
-	args=[ast.arg(arg='self', annotation=None)], vararg=None,
+defaultValueArgs = ast.arguments(
+	args=[ast.arg(arg='self', annotation=None), ast.arg(arg='spec', annotation=None)], vararg=None,
 	kwonlyargs=[], kw_defaults=[],
 	kwarg=None, defaults=[])
 
 if sys.version_info >= (3, 8):	# TODO cleaner way to handle this?
 	noArgs.posonlyargs = []
-	selfArg.posonlyargs = []
+	defaultValueArgs.posonlyargs = []
 
 class AttributeFinder(NodeVisitor):
 	"""Utility class for finding all referenced attributes of a given name."""
@@ -1084,7 +1084,7 @@ class ASTSurgeon(NodeTransformer):
 					args = [
 						Set([Str(prop) for prop in properties]),
 						Set([Str(attr) for attr in metaAttrs]),
-						Lambda(selfArg, origValue)
+						Lambda(defaultValueArgs, origValue)
 					]
 					value = Call(Name(createDefault, Load()), args, [])
 					copy_location(value, origValue)

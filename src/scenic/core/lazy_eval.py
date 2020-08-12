@@ -24,7 +24,7 @@ class LazilyEvaluable:
 		assert not needsLazyEvaluation(value)	# value should not require further evaluation
 		return value
 
-	def evaluateInner(self, context):
+	def evaluateInner(self, context, specifiers):
 		"""Actually evaluate in the given context, which provides all required properties."""
 		return self
 
@@ -51,7 +51,7 @@ class DelayedArgument(LazilyEvaluable):
 		kwdargs = { name: toDelayedArgument(arg) for name, arg in kwargs.items() }
 		subprops = (darg._requiredProperties for darg in itertools.chain(dargs, kwdargs.values()))
 		props = self._requiredProperties.union(*subprops)
-		def value(context):
+		def value(context, specifiers):
 			subvalues = (darg.evaluateIn(context) for darg in dargs)
 			kwsvs = { name: darg.evaluateIn(context) for name, darg in kwdargs.items() }
 			return self.evaluateIn(context)(*subvalues, **kwsvs)

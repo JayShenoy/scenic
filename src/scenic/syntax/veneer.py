@@ -59,7 +59,7 @@ from scenic.core.type_support import isA, toType, toTypes, toScalar, toHeading, 
 from scenic.core.type_support import evaluateRequiringEqualTypes, underlyingType
 from scenic.core.geometry import normalizeAngle, apparentHeadingAtPoint
 from scenic.core.object_types import Constructible
-from scenic.core.specifiers import Specifier
+from scenic.core.specifiers import Specifier, ModifyingSpecifier
 from scenic.core.lazy_eval import DelayedArgument
 from scenic.core.utils import RuntimeParseError
 from scenic.core.vectors import OrientedVector
@@ -202,7 +202,7 @@ def mutate(*objects):		# TODO update syntax
 
 ### Prefix operators
 
-def Visible(region, specs=None):
+def Visible(region):
 	"""The 'visible <region>' operator."""
 	if not isinstance(region, Region):
 		raise RuntimeParseError('"visible X" with X not a Region')
@@ -230,14 +230,14 @@ for op in ops:
 
 ### Infix operators
 
-def FieldAt(X, Y, specs=None):
+def FieldAt(X, Y):
 	"""The '<VectorField> at <vector>' operator."""
 	if not isinstance(X, VectorField):
 		raise RuntimeParseError('"X at Y" with X not a vector field')
 	Y = toVector(Y, '"X at Y" with Y not a vector')
 	return X[Y]
 
-def RelativeTo(X, Y, specs=None):
+def RelativeTo(X, Y):
 	"""The 'X relative to Y' polymorphic operator.
 
 	Allowed forms:
@@ -287,7 +287,7 @@ def OffsetAlong(X, H, Y, specs=None):
 	H = toHeading(H, '"X offset along H by Y" with H not a heading or vector field')
 	return X.offsetRotated(H, Y)
 
-def RelativePosition(X, Y=None, specs=None):
+def RelativePosition(X, Y=None):
 	"""The 'relative position of <vector> [from <vector>]' operator.
 
 	If the 'from <vector>' is omitted, the position of ego is used.
@@ -298,7 +298,7 @@ def RelativePosition(X, Y=None, specs=None):
 	Y = toVector(Y, '"relative position of X from Y" with Y not a vector')
 	return X - Y
 
-def RelativeHeading(X, Y=None, specs=None):
+def RelativeHeading(X, Y=None):
 	"""The 'relative heading of <heading> [from <heading>]' operator.
 
 	If the 'from <heading>' is omitted, the heading of ego is used.
@@ -310,7 +310,7 @@ def RelativeHeading(X, Y=None, specs=None):
 		Y = toHeading(Y, '"relative heading of X from Y" with Y not a heading')
 	return normalizeAngle(X - Y)
 
-def ApparentHeading(X, Y=None, specs=None):
+def ApparentHeading(X, Y=None):
 	"""The 'apparent heading of <oriented point> [from <vector>]' operator.
 
 	If the 'from <vector>' is omitted, the position of ego is used.
@@ -322,7 +322,7 @@ def ApparentHeading(X, Y=None, specs=None):
 	Y = toVector(Y, '"relative heading of X from Y" with Y not a vector')
 	return apparentHeadingAtPoint(X.position, X.heading, Y)
 
-def DistanceFrom(X, Y=None, specs=None):
+def DistanceFrom(X, Y=None):
 	"""The 'distance from <vector> [to <vector>]' operator.
 
 	If the 'to <vector>' is omitted, the position of ego is used.
@@ -333,18 +333,18 @@ def DistanceFrom(X, Y=None, specs=None):
 	Y = toVector(Y, '"distance from X to Y" with Y not a vector')
 	return X.distanceTo(Y)
 
-def AngleTo(X, specs=None):
+def AngleTo(X):
 	"""The 'angle to <vector>' operator (using the position of ego as the reference)."""
 	X = toVector(X, '"angle to X" with X not a vector')
 	return ego().angleTo(X)
 
-def AngleFrom(X, Y, specs=None):
+def AngleFrom(X, Y):
 	"""The 'angle from <vector> to <vector>' operator."""
 	X = toVector(X, '"angle from X to Y" with X not a vector')
 	Y = toVector(Y, '"angle from X to Y" with Y not a vector')
 	return X.angleTo(Y)
 
-def Follow(F, X, D, specs=None):
+def Follow(F, X, D):
 	"""The 'follow <field> from <vector> for <number>' operator."""
 	if not isinstance(F, VectorField):
 		raise RuntimeParseError('"follow F from X for D" with F not a vector field')
@@ -354,7 +354,7 @@ def Follow(F, X, D, specs=None):
 	heading = F[pos]
 	return OrientedPoint(position=pos, heading=heading)
 
-def CanSee(X, Y, specs=None):
+def CanSee(X, Y):
 	"""The 'X can see Y' polymorphic operator.
 
 	Allowed forms:
@@ -371,21 +371,21 @@ def CanSee(X, Y, specs=None):
 
 ### Specifiers
 
-def With(prop, val, specs=None):
+def With(prop, val):
 	"""The 'with <property> <value>' specifier.
 
 	Specifies the given property, with no dependencies.
 	"""
 	return Specifier(prop, val)
 
-def At(pos, specs=None):
+def At(pos):
 	"""The 'at <vector>' specifier.
 
 	Specifies 'position', with no dependencies."""
 	pos = toVector(pos, 'specifier "at X" with X not a vector')
 	return Specifier('position', pos)
 
-def In(region, specs=None):
+def In(region):
 	"""The 'in <region>' specifier.
 
 	Specifies 'position', with no dependencies. Optionally specifies 'heading'
@@ -395,7 +395,7 @@ def In(region, specs=None):
 	extras = {'heading'} if alwaysProvidesOrientation(region) else {}
 	return Specifier('position', Region.uniformPointIn(region), optionals=extras)
 
-def On(region, specs=None):
+def On(region):
 	"""The 'on <region> specifier.
 
 	Specifies 'position', with no dependencies. Optionally specifies 'heading'
@@ -409,9 +409,9 @@ def On(region, specs=None):
 	"""
 	region = toType(region, Region, 'specifier "on R" with R not a Region')
 	extras = {'heading'} if alwaysProvidesOrientation(region) else {}
-	return Specifier('position', Region.uniformPointIn(region), optionals=extras)
+	return ModifyingSpecifier('position', Region.uniformPointIn(region), optionals=extras)
 
-def alwaysProvidesOrientation(region, specs=None):
+def alwaysProvidesOrientation(region):
 	"""Whether a Region or distribution over Regions always provides an orientation."""
 	if isinstance(region, Region):
 		return region.orientation is not None
@@ -420,7 +420,7 @@ def alwaysProvidesOrientation(region, specs=None):
 	else:
 		return False
 
-def Beyond(pos, offset, fromPt=None, specs=None):
+def Beyond(pos, offset, fromPt=None):
 	"""The 'beyond X by Y [from Z]' polymorphic specifier.
 
 	Specifies 'position', with no dependencies.
@@ -443,7 +443,7 @@ def Beyond(pos, offset, fromPt=None, specs=None):
 	lineOfSight = fromPt.angleTo(pos)
 	return Specifier('position', pos.offsetRotated(lineOfSight, offset))
 
-def VisibleFrom(base, specs=None):
+def VisibleFrom(base):
 	"""The 'visible from <Point>' specifier.
 
 	Specifies 'position', with no dependencies.
@@ -455,14 +455,14 @@ def VisibleFrom(base, specs=None):
 		raise RuntimeParseError('specifier "visible from O" with O not a Point')
 	return Specifier('position', Region.uniformPointIn(base.visibleRegion))
 
-def VisibleSpec(specs=None):
+def VisibleSpec():
 	"""The 'visible' specifier (equivalent to 'visible from ego').
 
 	Specifies 'position', with no dependencies.
 	"""
 	return VisibleFrom(ego())
 
-def OffsetBy(offset, specs=None):
+def OffsetBy(offset):
 	"""The 'offset by <vector>' specifier.
 
 	Specifies 'position', with no dependencies.
@@ -471,7 +471,7 @@ def OffsetBy(offset, specs=None):
 	pos = RelativeTo(offset, ego()).toVector()
 	return Specifier('position', pos)
 
-def OffsetAlongSpec(direction, offset, specs=None):
+def OffsetAlongSpec(direction, offset):
 	"""The 'offset along X by Y' polymorphic specifier.
 
 	Specifies 'position', with no dependencies.
@@ -496,7 +496,7 @@ def Facing(heading, specs=None):
 		heading = toHeading(heading, 'specifier "facing X" with X not a heading or vector field')
 		return Specifier('heading', heading)
 
-def FacingToward(pos, specs=None):
+def FacingToward(pos):
 	"""The 'facing toward <vector>' specifier.
 
 	Specifies the yaw angle of 'heading', depending on 'position'.
@@ -505,14 +505,14 @@ def FacingToward(pos, specs=None):
 	return Specifier('heading', DelayedArgument({'position'}, # Depend on 'roll' 
 	                                            lambda self, specifier: self.position.angleTo(pos)))
 
-def FacingDirectlyToward(pos, specs=None):
+def FacingDirectlyToward(pos):
 	"""The 'facing directly toward <vector>' specifier.
 
 	Specifies yaw and pitch angles of 'heading', depending on 'position'.
 	"""
 	return NotImplemented
 
-def FacingAwayFrom(pos, specs=None):
+def FacingAwayFrom(pos):
 	""" The 'facing away from <vector>' specifier.
 
 	Specifies 'heading', depending on 'position'.
@@ -521,7 +521,7 @@ def FacingAwayFrom(pos, specs=None):
 	return Specifier('heading', DelayedArgument({'position'},
 												lambda self, specifer: pos.angleTo(self.position)))
 
-def ApparentlyFacing(heading, fromPt=None, specs=None):
+def ApparentlyFacing(heading, fromPt=None):
 	"""The 'apparently facing <heading> [from <vector>]' specifier.
 
 	Specifies 'heading', depending on 'position'.
@@ -549,7 +549,7 @@ def LeftSpec(pos, dist=0, specs=None):
 	return leftSpecHelper('left of', pos, dist, 'width', lambda dist: (dist, 0),
 	                      lambda self, dx, dy: Vector(-self.width / 2 - dx, dy))
 
-def RightSpec(pos, dist=0, specs=None):
+def RightSpec(pos, dist=0):
 	"""The 'right of X [by Y]' polymorphic specifier.
 
 	Specifies 'position', depending on 'width'. See other dependencies below.
@@ -563,7 +563,7 @@ def RightSpec(pos, dist=0, specs=None):
 	return leftSpecHelper('right of', pos, dist, 'width', lambda dist: (dist, 0),
 	                      lambda self, dx, dy: Vector(self.width / 2 + dx, dy))
 
-def Ahead(pos, dist=0, specs=None):
+def Ahead(pos, dist=0):
 	"""The 'ahead of X [by Y]' polymorphic specifier.
 
 	Specifies 'position', depending on 'height'. See other dependencies below.
@@ -578,7 +578,7 @@ def Ahead(pos, dist=0, specs=None):
 	return leftSpecHelper('ahead of', pos, dist, 'height', lambda dist: (0, dist),
 	                      lambda self, dx, dy: Vector(dx, self.height / 2 + dy))
 
-def Behind(pos, dist=0, specs=None):
+def Behind(pos, dist=0):
 	"""The 'behind X [by Y]' polymorphic specifier.
 
 	Specifies 'position', depending on 'height'. See other dependencies below.
@@ -592,7 +592,7 @@ def Behind(pos, dist=0, specs=None):
 	return leftSpecHelper('behind', pos, dist, 'height', lambda dist: (0, dist),
 	                      lambda self, dx, dy: Vector(dx, -self.height / 2 - dy))
 
-def Above(pos, dist=0, specs=None):
+def Above(pos, dist=0):
 	"""The 'above X [by Y]' polymorphic specifier.
 
 	Specifies 'position', depending on 'height'. 
@@ -605,7 +605,7 @@ def Above(pos, dist=0, specs=None):
 	"""
 	return NotImplemented
 
-def Below(pos, dist=0, specs=None):
+def Below(pos, dist=0):
 	"""The 'below X [by Y]' polymorphic specifier.
 
 	Specifies 'position', depending on 'height'. 
@@ -637,7 +637,7 @@ def leftSpecHelper(syntax, pos, dist, axis, toComponents, makeOffset):
 		new = DelayedArgument({axis, 'heading'}, val)
 	return Specifier('position', new, optionals=extras)
 
-def Following(field, dist, fromPt=None, specs=None):
+def Following(field, dist, fromPt=None):
 	"""The 'following F [from X] for D' specifier.
 
 	Specifies 'position', and optionally 'heading', with no dependencies.

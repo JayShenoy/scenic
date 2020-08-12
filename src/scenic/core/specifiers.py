@@ -38,9 +38,12 @@ class Specifier:
 	def __str__(self):
 		return f'<Specifier of {self.property}>'
 
-class ModifiableSpecifier(Specifier):
+class ModifyingSpecifier(Specifier):
 	def __init__(self, prop, value, deps=None, optionals={}):
-		super.__init__(self, prop, value, deps, optionals)
+		super().__init__(prop, value, deps, optionals)
+
+		# TODO: @Matthew ModifiableSpecifier class should check possible composable
+		# specifiers. If none, semantically the same as if a single specifier. 
 
 ## Support for property defaults
 
@@ -65,7 +68,7 @@ class PropertyDefault:
 		if isinstance(value, PropertyDefault):
 			return value
 		else:
-			return PropertyDefault(set(), set(), lambda self: value)
+			return PropertyDefault(set(), set(), lambda self, specifier: value)
 
 	def resolveFor(self, prop, overriddenDefs):
 		"""Create a Specifier for a property from this default and any superclass defaults."""
@@ -73,10 +76,10 @@ class PropertyDefault:
 			allReqs = self.requiredProperties
 			for other in overriddenDefs:
 				allReqs |= other.requiredProperties
-			def concatenator(context):
-				allVals = [self.value(context)]
+			def concatenator(context, specifier):
+				allVals = [self.value(context, specifier)]
 				for other in overriddenDefs:
-					allVals.append(other.value(context))
+					allVals.append(other.value(context, specifier))
 				return tuple(allVals)
 			val = DelayedArgument(allReqs, concatenator)
 		else:

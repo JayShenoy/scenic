@@ -250,7 +250,7 @@ class Point(Constructible):
 
 	mutationEnabled: False
 	mutator: PropertyDefault({'positionStdDev'}, {'additive'},
-							 lambda self: PositionMutator(self.positionStdDev))
+							 lambda self, specifier: PositionMutator(self.positionStdDev))
 	positionStdDev: 1
 
 	def __init__(self, *args, **kwargs):
@@ -312,7 +312,7 @@ class OrientedPoint(Point):
 	viewAngle: math.tau
 
 	mutator: PropertyDefault({'headingStdDev'}, {'additive'},
-		lambda self: HeadingMutator(self.headingStdDev))
+		lambda self, specifier: HeadingMutator(self.headingStdDev))
 	headingStdDev: math.radians(5)
 
 	def __init__(self, *args, **kwargs):
