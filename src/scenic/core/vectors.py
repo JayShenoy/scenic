@@ -8,7 +8,6 @@ import itertools
 import functools
 
 import shapely.geometry
-from pyquaternion import Quaternion 
 from scipy.spatial.transform import Rotation
 
 from scenic.core.distributions import (Samplable, Distribution, MethodDistribution,
