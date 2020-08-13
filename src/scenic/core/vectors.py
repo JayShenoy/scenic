@@ -141,55 +141,53 @@ def vectorDistributionMethod(method):
 
 class Orientation():
 	"""A quaternion representation of an orientation whose rotation axis and angle can be distributions."""
-	def __init__(self, q):
-		if type(q) is not Quaternion:
-			raise RuntimeError(f'cannot instantiate Orientation object with non-quaternion')
-		self.orientation = q
+	def __init__(self, x, y=0, z=0):
+		self.r = Rotation.from_euler('XYZ', [x, y, z], degrees=False)
+		self.q = self.r.as_quat()
 
 	@property
-	def w(self): 
-		return self.orientation.elements[0]
-
-	@property
-	def x(self):
-		return self.orientation.elements[1]
+	def x(self): 
+		return self.q[0]
 
 	@property
 	def y(self):
-		return self.orientation.elements[2]
+		return self.q[1]
 
 	@property
 	def z(self):
-		return self.orientation.elements[3]
+		return self.q[2]
+
+	@property
+	def w(self):
+		return self.q[3]
+
+	def get_rotvec(self):
+		r = R.from_quat(self.q)
+		return r.as_rotvec()
+
+	def get_rotation_angle(self):
+		rotvec = self.get_rotvec()
+		return rotvec.magnitude()
 
 	def get_euler(self):
-		return NotImplemented
+		r = R.from_quat(self.q)
+		return r.as_euler('XYZ', degrees=False)
 
 	def __mul__(self, other):
 		if type(other) is not Orientation:
 			return NotImplemented
-		return other.orientation * self.orientation
+		return other.q * self.q
 
 	def __eq__(self, other):
 		if type(other) is not Orientation:
 			return NotImplemented
-		return other.orientation == self.orientation
+		return other.q == self.q
 
 	def __getitem__(self, index):
-		return self.orientation[index]
-
-	def rotate_vector(self, v):
-		rot_quat = self.orientation.rotate(Quaternion(vector=(v))) 
-		return Vector(rot_quat[1], rot_quat[2], rot_quat[3])
-
-	def get_rotation_axis(self):
-		return self.orientation.axis
-
-	def get_rotation_angle_radians(self):
-		return self.orientation.radians
+		return self.q[index]
 
 	def __repr__(self):
-		return repr(self.orientation)
+		return repr(self.q)
 
 class Vector(Samplable, collections.abc.Sequence):
 	"""A 2D vector, whose coordinates can be distributions."""

@@ -95,8 +95,8 @@ def coerce(thing, ty):
 		return float(thing)
 	elif ty is Heading:
 		if isinstance(thing, tuple) or isinstance(thing, list):
-			thing = Orientation() # TODO: @Matthew Implement 
-			return thing.toHeading
+			thing = Orientation(thing[0], thing[1], thing[2]) if len(thing) == 3 else Orientation(thing[0]) # TODO: @Matthew Implement 
+			return thing.toHeading() # TODO: @Matthew Need to check if length of tuple/list is 2 (undefined semantics)
 		return thing.toHeading() if hasattr(thing, 'toHeading') else float(thing)
 	elif ty is Vector:
 		if isinstance(thing, tuple) or isinstance(thing, list):

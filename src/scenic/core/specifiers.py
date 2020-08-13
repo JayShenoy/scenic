@@ -42,8 +42,7 @@ class ModifyingSpecifier(Specifier):
 	def __init__(self, prop, value, deps=None, optionals={}):
 		super().__init__(prop, value, deps, optionals)
 
-		# TODO: @Matthew ModifiableSpecifier class should check possible composable
-		# specifiers. If none, semantically the same as if a single specifier. 
+		 
 
 ## Support for property defaults
 

@@ -310,6 +310,9 @@ class OrientedPoint(Point):
 	# TODO: @Matthew Heading is derived from Orientation 
 	heading: 0
 	viewAngle: math.tau
+	pitch: 0 # Y-axis
+	roll: 0 # X-axis
+	yaw: 0 # Z-axis 
 
 	mutator: PropertyDefault({'headingStdDev'}, {'additive'},
 		lambda self, specifier: HeadingMutator(self.headingStdDev))

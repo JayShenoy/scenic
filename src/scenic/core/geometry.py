@@ -95,7 +95,7 @@ def headingOfSegment(pointA, pointB):
 
 # TODO: @pytest Update to 3D view angle. Requires orientation
 def viewAngleToPoint(point, base, heading):
-	x, y, z= base
+	x, y, z = base
 	ox, oy, oz = point
 	a = math.atan2(oy - y, ox - x) - (heading + (math.pi / 2.0))
 	if a < -math.pi:

@@ -206,7 +206,7 @@ def Visible(region):
 	"""The 'visible <region>' operator."""
 	if not isinstance(region, Region):
 		raise RuntimeParseError('"visible X" with X not a Region')
-	# TODO: @Matthew ego().visibleRegion may be 3D
+	# TODO: @Matthew ego().visibleRegion is a 3D region 
 	return region.intersect(ego().visibleRegion)
 
 # front of <object>, etc.
@@ -245,6 +245,7 @@ def RelativeTo(X, Y):
 		<vector> relative to <oriented point> (and vice versa)
 		<vector> relative to <vector>
 		<heading> relative to <heading>
+		with <property> <value> relative to <oriented point | heading> 
 	"""
 	xf, yf = isA(X, VectorField), isA(Y, VectorField)
 	if xf or yf:
@@ -396,16 +397,15 @@ def In(region):
 	return Specifier('position', Region.uniformPointIn(region), optionals=extras)
 
 def On(region):
-	"""The 'on <region> specifier.
+	"""The 'on <X>' specifier.
 
 	Specifies 'position', with no dependencies. Optionally specifies 'heading'
-	if the given Region has a preferred orientation. May also be composed with
-	a position specifier, with the exception of 'at <vector>', to together
-	define the single 'position' property. 
+	if the given Region has a preferred orientation. May be composed with a single
+	specifier, with the exception of another ModifyingSpecifier and 'at <vector>'
 
 	Allowed forms:
 		on <region>
-		on <object> 
+		on <object>
 	"""
 	region = toType(region, Region, 'specifier "on R" with R not a Region')
 	extras = {'heading'} if alwaysProvidesOrientation(region) else {}
@@ -482,16 +482,17 @@ def OffsetAlongSpec(direction, offset):
 	"""
 	return Specifier('position', OffsetAlong(ego(), direction, offset))
 
-def Facing(heading, specs=None):
+def Facing(heading):
 	"""The 'facing X' polymorphic specifier.
 
-	Specifies 'heading', with dependencies depending on the form:
+	Specifies yaw and pitch angles of 'heading', with dependencies depending on the form:
 		facing <number> -- no dependencies;
-		facing <field> -- depends on 'position'.
+		facing <field> -- depends on 'position';
+		facing <vector> -- no dependencies;
 	"""
 	if isinstance(heading, VectorField):
 		return Specifier('heading', DelayedArgument({'position'},
-		                                            lambda self, specifier: heading[self.position]))
+		                                            lambda self, spec: heading[self.position]))
 	else:
 		heading = toHeading(heading, 'specifier "facing X" with X not a heading or vector field')
 		return Specifier('heading', heading)
@@ -503,7 +504,7 @@ def FacingToward(pos):
 	"""
 	pos = toVector(pos, 'specifier "facing toward X" with X not a vector')
 	return Specifier('heading', DelayedArgument({'position'}, # Depend on 'roll' 
-	                                            lambda self, specifier: self.position.angleTo(pos)))
+	                                            lambda self, spec: self.position.angleTo(pos)))
 
 def FacingDirectlyToward(pos):
 	"""The 'facing directly toward <vector>' specifier.
@@ -515,11 +516,18 @@ def FacingDirectlyToward(pos):
 def FacingAwayFrom(pos):
 	""" The 'facing away from <vector>' specifier.
 
-	Specifies 'heading', depending on 'position'.
+	Specifies yaw and pitch angles 'heading', depending on 'position'.
 	"""
 	pos = toVector(pos, 'specifier "facing away from X" with X not a vector')
 	return Specifier('heading', DelayedArgument({'position'},
-												lambda self, specifer: pos.angleTo(self.position)))
+												lambda self, spec: pos.angleTo(self.position)))
+
+def FacingDirectlyAwayFrom(pos):
+	"""The 'facing directly away from <vector>' specifier. 
+
+	Specifies yaw and pitch angles of 'heading', depending on 'position'.
+	"""
+	return NotImplemented
 
 def ApparentlyFacing(heading, fromPt=None):
 	"""The 'apparently facing <heading> [from <vector>]' specifier.
@@ -566,7 +574,7 @@ def RightSpec(pos, dist=0):
 def Ahead(pos, dist=0):
 	"""The 'ahead of X [by Y]' polymorphic specifier.
 
-	Specifies 'position', depending on 'height'. See other dependencies below.
+	Specifies 'position', depending on 'length'. See other dependencies below.
 
 	Allowed forms:
 
@@ -581,7 +589,7 @@ def Ahead(pos, dist=0):
 def Behind(pos, dist=0):
 	"""The 'behind X [by Y]' polymorphic specifier.
 
-	Specifies 'position', depending on 'height'. See other dependencies below.
+	Specifies 'position', depending on 'length'. See other dependencies below.
 
 	Allowed forms:
 		behind <oriented point> [by <scalar/vector>] -- optionally specifies 'heading';
