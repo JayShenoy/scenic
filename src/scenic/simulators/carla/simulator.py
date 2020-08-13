@@ -6,12 +6,13 @@ except ImportError as e:
 
 import pygame
 
+from carla import ColorConverter as cc
+
 import scenic.core.simulators as simulators
 import scenic.simulators.carla.utils.utils as utils
 import scenic.simulators.carla.utils.visuals as visuals
-import scenic.simulators.carla.utils.bounding_boxes as bb
+import scenic.simulators.carla.utils.recording_utils as r_utils
 import time
-
 
 import numpy as np
 import json
@@ -35,7 +36,6 @@ class CarlaSimulator(simulators.Simulator):
 
 	def createSimulation(self, scene):
 		return CarlaSimulation(scene, self.client, self.render, self.map)
-
 
 class CarlaSimulation(simulators.Simulation):
 	def __init__(self, scene, client, render, map):
@@ -61,7 +61,12 @@ class CarlaSimulation(simulators.Simulation):
 				self.displayDim,
 				pygame.HWSURFACE | pygame.DOUBLEBUF
 			)
-			self.cameraManager = None
+			self.displayCameraManager = None
+
+		self.rgb_frame_buffer = []
+		self.semantic_frame_buffer = []
+		self.lidar_data_buffer = []
+		self.bbox_buffer = []
 
 		# Create Carla actors corresponding to Scenic objects
 		self.ego = None
@@ -73,7 +78,6 @@ class CarlaSimulation(simulators.Simulation):
 			# Set up transform
 			loc = utils.scenicToCarlaLocation(obj.position, world=self.world)
 			rot = utils.scenicToCarlaRotation(obj.heading)
-			# print(blueprint)
 			transform = carla.Transform(loc, rot)
 			
 			# # Create Carla actor
@@ -106,33 +110,41 @@ class CarlaSimulation(simulators.Simulation):
 				if self.render and isinstance(obj.carlaActor, carla.Vehicle):
 					camIndex = 0
 					camPosIndex = 0
-					self.cameraManager = visuals.CameraManager(self.world, carlaActor, self.hud)
-					self.cameraManager._transform_index = camPosIndex
-					self.cameraManager.set_sensor(camIndex)
-					self.cameraManager.set_transform(self.camTransform)
+					self.displayCameraManager = visuals.CameraManager(self.world, carlaActor, self.hud)
+					self.displayCameraManager._transform_index = camPosIndex
+					self.displayCameraManager.set_sensor(camIndex)
+					self.displayCameraManager.set_transform(camPosIndex)
 
-					VIEW_WIDTH = 1280.0
-					VIEW_HEIGHT = 720.0
+					VIEW_WIDTH = self.hud.dim[0]
+					VIEW_HEIGHT = self.hud.dim[1]
 					VIEW_FOV = 90.0
+
+					bp = self.world.get_blueprint_library().find('sensor.camera.rgb')
+					bp.set_attribute('image_size_x', str(VIEW_WIDTH))
+					bp.set_attribute('image_size_y', str(VIEW_HEIGHT))
+					bp.set_attribute('fov', str(VIEW_FOV))
+					ego_hood_transform = carla.Transform(carla.Location(x=0.0, y=0.0, z=2.0))
+					self.rgb_cam = self.world.spawn_actor(bp, ego_hood_transform, attach_to=carlaActor)
+					self.rgb_cam.listen(self.process_rgb_image)
+
+					# Set up calibration matrix to be used for bounding box projection
 					calibration = np.identity(3)
 					calibration[0, 2] = VIEW_WIDTH / 2.0
 					calibration[1, 2] = VIEW_HEIGHT / 2.0
 					calibration[0, 0] = calibration[1, 1] = VIEW_WIDTH / (2.0 * np.tan(VIEW_FOV * np.pi / 360.0))
-					self.cameraManager.sensor.calibration = calibration
+					self.rgb_cam.calibration = calibration
 
-					semanticCamIndex = 5
-					semanticCamPosIndex = 0
-					self.semanticCameraManager = visuals.CameraManager(self.world, carlaActor, self.hud)
-					self.semanticCameraManager._transform_index = semanticCamPosIndex
-					self.semanticCameraManager.set_sensor(semanticCamIndex)
-					self.semanticCameraManager.set_transform(self.camTransform)
+					# bp = self.world.get_blueprint_library().find('sensor.camera.semantic_segmentation')
+					# bp.set_attribute('image_size_x', str(VIEW_WIDTH))
+					# bp.set_attribute('image_size_y', str(VIEW_HEIGHT))
+					# self.semantic_cam = self.world.spawn_actor(bp, ego_hood_transform, attach_to=carlaActor)
+					# self.semantic_cam.listen(self.process_semantic_image)
 
-					lidarSensorIndex = 6
-					lidarSensorPosIndex = 1
-					self.lidarSensorManager = visuals.CameraManager(self.world, carlaActor, self.hud)
-					self.lidarSensorManager._transform_index = lidarSensorPosIndex
-					self.lidarSensorManager.set_sensor(lidarSensorIndex)
-					self.lidarSensorManager.set_transform(lidarSensorPosIndex)
+					# bp = self.world.get_blueprint_library().find('sensor.lidar.ray_cast')
+					# lidar_transform = carla.Transform(carla.Location(x=1.6, z=1.7))
+					# self.lidar_sensor = self.world.spawn_actor(bp, lidar_transform, attach_to=carlaActor)
+					# self.lidar_sensor.listen(self.process_lidar_data)
+
 
 		self.world.tick() ## allowing manualgearshift to take effect 
 
@@ -148,9 +160,6 @@ class CarlaSimulation(simulators.Simulation):
 			if obj.speed is not None:
 				equivVel = utils.scenicSpeedToCarlaVelocity(obj.speed, obj.heading)
 				obj.carlaActor.set_velocity(equivVel)
-
-		# Initialize array of 3D bounding boxes
-		self.bounding_boxes = []
 
 	def readPropertiesFromCarla(self):
 		for obj in self.objects:
@@ -193,19 +202,16 @@ class CarlaSimulation(simulators.Simulation):
 
 		vehicles = self.world.get_actors().filter('vehicle.*')
 
+		curr_frame_idx = self.world.get_snapshot().frame
+
+		bounding_boxes_3d = r_utils.BBoxUtil.get_bounding_boxes(vehicles, self.rgb_cam)
+		bounding_boxes_2d = r_utils.BBoxUtil.get_2d_bounding_boxes(bounding_boxes_3d)
+		self.bbox_buffer.append((curr_frame_idx, bounding_boxes_2d))
+
 		# Render simulation
 		if self.render:
 			# self.hud.tick(self.world, self.ego, self.displayClock)
-			self.cameraManager.render(self.display)
-
-			# Project and draw bounding boxes to display
-			# if self.render_bounding_boxes:
-				# bounding_boxes = bb.ClientSideBoundingBoxes.get_bounding_boxes(vehicles, self.cameraManager.sensor)
-				# bb.ClientSideBoundingBoxes.draw_bounding_boxes(self.display, bounding_boxes)
-
-			bounding_boxes_3d = bb.ClientSideBoundingBoxes.get_3d_bounding_boxes(vehicles, self.cameraManager.sensor)
-			bounding_boxes_3d = [bb.tolist() for bb in bounding_boxes_3d]
-			self.bounding_boxes.append(bounding_boxes_3d)
+			self.displayCameraManager.render(self.display)
 
 			# self.hud.render(self.display)
 			pygame.display.flip()
@@ -215,9 +221,88 @@ class CarlaSimulation(simulators.Simulation):
 
 		return self.currentState()
 
-	def save_videos(self, scene_name):
-		self.cameraManager.save_video('{}_rgb.mp4'.format(scene_name))
-		self.semanticCameraManager.save_video('{}_semantic.mp4'.format(scene_name))
+	def process_rgb_image(self, image):
+		image.convert(cc.Raw)
+		self.rgb_frame_buffer.append(image)
 
-		with open('{}_boxes.json'.format(scene_name), 'w') as f:
-			json.dump(self.bounding_boxes, f)
+	def process_semantic_image(self, image):
+		# Save per-pixel classification for later
+		image_classes = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
+		image_classes = np.reshape(image_classes, (image.height, image.width, 4))
+		# Class is stored in red channel
+		image_classes = image_classes[:, :, 2].copy()
+
+		image.convert(cc.CityScapesPalette)
+
+		self.semantic_frame_buffer.append((image, image_classes))
+
+	def process_lidar_data(self, lidar_data):
+		self.lidar_data_buffer.append(lidar_data)
+
+	def save_recordings(self, scene_name):
+		# Find frame indices for which all sensors have data (so that recordings are synchronized)
+		rgb_data = {data.frame: data for data in self.rgb_frame_buffer}
+		semantic_data = {data.frame: data for data, _ in self.semantic_frame_buffer}
+		frame_class_data = {data.frame: class_data for data, class_data in self.semantic_frame_buffer}
+		lidar_data = {data.frame: data for data in self.lidar_data_buffer}
+		bbox_data = {frame_idx: bboxes for frame_idx, bboxes in self.bbox_buffer}
+
+		common_frame_idxes = set(rgb_data.keys()).intersection(set(semantic_data.keys())).intersection(lidar_data.keys()).intersection(bbox_data.keys())
+		common_frame_idxes = sorted(list(common_frame_idxes))
+
+		rgb_recording = r_utils.VideoRecording()
+		semantic_recording = r_utils.VideoRecording()
+		lidar_recording = r_utils.LidarRecording()
+		bbox_recording = r_utils.BBoxRecording()
+
+		for frame_idx in common_frame_idxes:
+			rgb_recording.add_frame(rgb_data[frame_idx])
+			semantic_recording.add_frame(semantic_data[frame_idx])
+
+			lidar_points = np.frombuffer(lidar_data[frame_idx].raw_data, dtype=np.dtype('f4'))
+			lidar_points = np.reshape(lidar_points, (int(lidar_points.shape[0] / 3), 3))
+
+			# Add extra column of ones for matrix transforms
+			lidar_points_4d = np.hstack((lidar_points, np.ones((lidar_points.shape[0], 1))))
+			lidar_points_4d = np.transpose(lidar_points_4d)
+
+			lidar_transform = lidar_data[frame_idx].transform
+			lidar_points_world = r_utils.BBoxUtil.sensor_transform_to_world(lidar_points_4d, lidar_transform)
+
+			rgb_cam_transform = rgb_data[frame_idx].transform
+			lidar_points_rgb_cam = r_utils.BBoxUtil.world_to_sensor_transform(lidar_points_world, rgb_cam_transform)
+
+			lidar_points_calibrated = r_utils.BBoxUtil.get_sensor_calibrated(lidar_points_rgb_cam, self.rgb_cam.calibration)
+			
+			classified_lidar_points = []
+
+			# Semantic frame contains classification for each pixel
+			frame_classes = frame_class_data[frame_idx]
+
+			for idx, lidar_pt in enumerate(lidar_points):
+				calib_coords = lidar_points_calibrated[idx]
+
+				# Only keep points in front of camera
+				if calib_coords[0, 2] > 0:
+					xy_proj = np.round(calib_coords[0, :2]).astype(np.int)
+					x_proj = xy_proj[0, 0]
+					y_proj = xy_proj[0, 1]
+
+					# Default classification is nothing
+					classification = 0
+
+					# Ensure that projected point falls within frame boundaries
+					if 0 <= x_proj < semantic_data[frame_idx].width and 0 <= y_proj < semantic_data[frame_idx].height:
+						classification = frame_classes[y_proj, x_proj]
+
+					classified_lidar_pt = lidar_pt.astype(float).tolist() + [int(classification)]
+					classified_lidar_points.append(classified_lidar_pt)
+
+			lidar_recording.add_frame(classified_lidar_points)
+
+			bbox_recording.add_frame(bbox_data[frame_idx])
+
+		rgb_recording.save('{}_rgb.mp4'.format(scene_name))
+		semantic_recording.save('{}_semantic.mp4'.format(scene_name))
+		lidar_recording.save('{}_lidar.json'.format(scene_name))
+		bbox_recording.save('{}_bboxes.json'.format(scene_name))

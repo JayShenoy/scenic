@@ -41,6 +41,7 @@ startLane = straight_maneuver.startLane
 connectingLane = straight_maneuver.connectingLane
 endLane = straight_maneuver.endLane
 centerlines = [startLane.centerline, connectingLane.centerline, endLane.centerline]
+print("centerlines: ", centerlines)
 
 
 conflicting_lefts = filter(lambda m: m.type == ManeuverType.LEFT_TURN, straight_maneuver.conflictingManeuvers)

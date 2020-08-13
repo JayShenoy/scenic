@@ -35,6 +35,7 @@ for intersection in network.intersections:
 intersection = Uniform(*threeWayIntersections)
 # intersection = threeWayIntersections[5]
 maneuvers = intersection.maneuvers
+print("maneuvers: ", maneuvers)
 
 leftTurn_manuevers = []
 for m in maneuvers:
@@ -60,14 +61,15 @@ other_L_connectingLane = leftTurn_maneuver.connectingLane
 other_L_endLane = leftTurn_maneuver.endLane
 
 other_L_centerlines = [other_L_startLane.centerline, other_L_connectingLane.centerline, other_L_endLane.centerline]
+print("ego_L_centerlines: ", ego_L_centerlines)
 
 ego = Car at ego_L_startLane.centerline[-1],
 		with blueprint 'vehicle.tesla.model3',
 		with behavior EgoBehavior(target_speed=10, trajectory=ego_L_centerlines, thresholdDistance = 20)
 
-other = Car on other_L_startLane.centerline,
-		with blueprint 'vehicle.tesla.model3',
-		with behavior FollowTrajectoryBehavior(target_speed=10, trajectory=other_L_centerlines)
+# other = Car on other_L_startLane.centerline,
+# 		with blueprint 'vehicle.tesla.model3',
+# 		with behavior FollowTrajectoryBehavior(target_speed=10, trajectory=other_L_centerlines)
 
 
 # require that ego car reaches the intersection before the other car

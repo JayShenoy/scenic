@@ -23,7 +23,7 @@ parser.add_argument('-z', '--zoom', help='zoom expansion factor', type=float, de
 parser.add_argument('-s', '--seed', help='random seed', type=int)
 parser.add_argument('-v', '--verbosity', help='verbosity level (default 1)',
                     type=int, choices=(0, 1, 2, 3), default=1)
-parser.add_argument('-r', '--record', help='record simulation videos', action='store_true')
+parser.add_argument('-r', '--record', help='record simulation videos', action='store_false')
 parser.add_argument('-o', '--out', help='output directory', type=str, default='.')
 
 # Simulation options
@@ -87,12 +87,13 @@ def runSimulation(scene, output_path):
     if args.verbosity >= 1:
         print('  Beginning simulation...')
     try:
-        errors.callBeginningScenicTrace(
-            lambda: scene.simulate(maxSteps=args.time, verbosity=args.verbosity)
-        )
+        # errors.callBeginningScenicTrace(
+        #     lambda: scene.simulate(maxSteps=args.time, verbosity=args.verbosity)
+        # )
+        _, simulation = scene.simulate(maxSteps=args.time, verbosity=args.verbosity)
 
         if args.record:
-            simulation.save_videos(output_path)
+            simulation.save_recordings(output_path)
             
     except SimulationCreationError as e:
         if args.verbosity >= 1:

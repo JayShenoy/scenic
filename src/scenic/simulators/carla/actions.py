@@ -204,6 +204,7 @@ class SetManualFirstGearShiftAction(Action):
 		vehicle.apply_control(carla.VehicleControl(manual_gear_shift=True, gear=1))
 
 
+
 #################################################
 # Actions available to all carla.Walker objects #
 #################################################
@@ -213,7 +214,7 @@ class SetRelativeDirectionAction(Action):
 
 	def __init__(self, offset, degrees=False):
 		super().__init__()
-		self.offset = math.radians(offset) if degrees else offset
+		# self.offset = math.radians(offset) if degrees else offset
 
 	def applyTo(self, obj, walker, sim):
 		ctrl = walker.get_control()
@@ -224,6 +225,21 @@ class SetRelativeDirectionAction(Action):
 		ctrl.direction = utils.scalarToCarlaVector3D(newX, newY, currDir.z)
 		walker.apply_control(ctrl)
 
+class WalkTowardsAction(Action):
+	'''Offsets direction counterclockwise relative to walker's forward vector.'''
+
+	def __init__(self, goal_position):
+		super().__init__()
+		# self.offset = math.radians(offset) if degrees else offset
+		self.x = goal_position.x
+		self.y = goal_position.y
+
+	def applyTo(self, obj, walker, sim):
+		ctrl = walker.get_control()
+		currDir = ctrl.direction
+		ctrl.direction = utils.scalarToCarlaVector3D(self.x, self.y, currDir.z)
+		walker.apply_control(ctrl)
+
 
 class SetSpeedAction(Action):
 	def __init__(self, speed):
@@ -231,10 +247,8 @@ class SetSpeedAction(Action):
 			'Speed must be a non-negative float.'
 		super().__init__()
 		self.speed = speed  # float
-		# print("SetSpeedAction called")
 
 	def applyTo(self, obj, walker, sim):
-		print("applied control to the walker")
 		ctrl = walker.get_control()
 		ctrl.speed = self.speed
 		walker.apply_control(ctrl)
@@ -320,9 +334,9 @@ class FollowLaneAction(Action):
 		else:
 		    steering = max(-self.max_steer, self.current_steer)
 
-		print("steer: ", steering)
-		print("throttle: ", control.throttle)
-		print("brake: ", control.brake)
+		# print("steer: ", steering)
+		# print("throttle: ", control.throttle)
+		# print("brake: ", control.brake)
 
 		control.steer = steering
 		control.hand_brake = False

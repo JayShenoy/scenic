@@ -30,7 +30,7 @@ bicycleModels = {# Speed 10 : Longitudinal : K_P=0.25, K_D=0.025, K_I=0.0
       'vehicle.gazelle.omafiets', # Lateral :  K_P=0.2, K_D=0.1, K_I=0.0
 }
 
-motorcycleModels = {# Speed 10 : Longitudinal : K_P=0.25, K_D=0.025, K_I=0.0 / Lateral :  K_P=0.3, K_D=0.17, K_I=0.001
+motorcycleModels = {# Speed 10 : Longitudinal : K_P=0.25, K_D=0.025, K_I=0.0 
       'vehicle.harley-davidson.low_rider', # Lateral :  K_P=0.2, K_D=0.1, K_I=0.0
       'vehicle.kawasaki.ninja', # Lateral :  K_P=0.2, K_D=0.1, K_I=0.0
       'vehicle.yamaha.yzf', # Lateral :  K_P=0.2, K_D=0.1, K_I=0.0

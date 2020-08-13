@@ -322,6 +322,7 @@ class Road(LinearElement):
     def is1Way(self):
         return self.forwardLanes is None or self.backwardLanes is None
 
+
 @attr.s(auto_attribs=True, kw_only=True, repr=False)
 class LaneGroup(LinearElement):
     """A group of parallel lanes with the same type and direction."""
@@ -761,6 +762,11 @@ class Network:
     def intersectionAt(self, point: Vectorlike) -> Union[Intersection, None]:
         """Get the intersection at a given point."""
         return self.findPointIn(point, self.intersections)
+
+    @distributionFunction
+    def sidewalkAt(self, point: Vectorlike) -> Union[Sidewalk, None]:
+        """Get the intersection at a given point."""
+        return self.findPointIn(point, self.sidewalks)
 
     @distributionFunction
     def nominalDirectionsAt(self, point: Vectorlike) -> Tuple[float]:

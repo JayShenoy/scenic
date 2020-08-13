@@ -479,6 +479,12 @@ class PolylineRegion(Region):
 		regions = tuple(regions)
 		if not regions:
 			return nowhere
+
+		if len(regions)==1 and isinstance(regions[0], PolylineRegion):
+			# return as it is if only one centerline given
+			print("regions[0]" ,regions[0])
+			return regions[0]
+
 		if any(not isinstance(region, PolylineRegion) for region in regions):
 			raise RuntimeError(f'cannot take Polyline union of regions {regions}')
 		# take union by collecting LineStrings, to preserve the order of points
