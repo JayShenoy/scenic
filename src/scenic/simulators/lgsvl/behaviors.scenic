@@ -1,11 +1,18 @@
 """Behaviors for dynamic agents in LGSVL."""
 
-from scenic.simulators.lgsvl.simulator import FollowWaypointsAction, SetDestinationAction
+from scenic.domains.driving.behaviors import *	# use all common driving behaviors
 
-## Behaviors
+try:
+    from scenic.simulators.lgsvl.actions import *
+except ModuleNotFoundError:
+    pass    # ignore; error will be caught later if user attempts to run a simulation
 
 behavior DriveTo(target):
-    take SetDestinationAction(target)
+	action = SetDestinationAction(target)
+	while True:
+		take action
 
 behavior FollowWaypoints(waypoints):
-    take FollowWaypointsAction(waypoints)
+	action = FollowWaypointsAction(waypoints)
+	while True:
+		take action

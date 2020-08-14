@@ -3,7 +3,7 @@ import sys
 import inspect
 
 from scenic import scenarioFromString
-from scenic.core.simulators import Simulator
+from scenic.core.simulators import DummySimulator
 import scenic.syntax.veneer as veneer
 
 ## Scene generation utilities
@@ -14,7 +14,10 @@ def compileScenic(code, removeIndentation=True):
     if removeIndentation:
         # to allow indenting code to line up with test function
         code = inspect.cleandoc(code)
-    return scenarioFromString(code)
+    checkVeneerIsInactive()
+    scenario = scenarioFromString(code)
+    checkVeneerIsInactive()
+    return scenario
 
 # Static scenes
 
@@ -39,22 +42,44 @@ def sampleParamPFrom(code, maxIterations=1):
 
 # Dynamic simulations
 
-def sampleEgoActions(scenario, maxIterations=1, maxSteps=1):
-    scene, iterations = generateChecked(scenario, maxIterations)
-    return sampleEgoActionsFromScene(scene, maxIterations=maxIterations, maxSteps=maxSteps)
-
-def sampleEgoActionsFromScene(scene, maxIterations=1, maxSteps=1):
-    allActions = sampleActionsFromScene(scene, maxIterations=maxIterations, maxSteps=maxSteps)
+def sampleEgoActions(scenario, maxIterations=1, maxSteps=1, maxScenes=1, singleAction=True):
+    allActions = sampleActions(scenario, maxIterations, maxSteps, maxScenes,
+                               singleAction, asMapping=False)
     return [actions[0] for actions in allActions]
 
-def sampleActions(scenario, maxIterations=1, maxSteps=1):
-    scene, iterations = generateChecked(scenario, maxIterations)
-    return sampleActionsFromScene(scene, maxIterations=maxIterations, maxSteps=maxSteps)
+def sampleEgoActionsFromScene(scene, maxIterations=1, maxSteps=1, singleAction=True):
+    allActions = sampleActionsFromScene(scene, maxIterations=maxIterations, maxSteps=maxSteps,
+                                        singleAction=singleAction, asMapping=False)
+    if allActions is None:
+        return None
+    return [actions[0] for actions in allActions]
 
-def sampleActionsFromScene(scene, maxIterations=1, maxSteps=1):
-    sim = Simulator()
-    traj = sim.simulate(scene, maxSteps=maxSteps, maxIterations=maxIterations)
-    return traj[1:]
+def sampleActions(scenario, maxIterations=1, maxSteps=1, maxScenes=1,
+                  singleAction=True, asMapping=False):
+    for i in range(maxScenes):
+        scene, iterations = generateChecked(scenario, maxIterations)
+        actions = sampleActionsFromScene(scene, maxIterations=maxIterations, maxSteps=maxSteps,
+                                         singleAction=singleAction, asMapping=asMapping)
+        if actions is not None:
+            return actions
+    assert False, f'unable to find successful simulation over {maxScenes} scenes'
+
+def sampleActionsFromScene(scene, maxIterations=1, maxSteps=1,
+                           singleAction=True, asMapping=False):
+    sim = DummySimulator()
+    result = sim.simulate(scene, maxSteps=maxSteps, maxIterations=maxIterations)
+    if not result:
+        return None
+    actionSequence = result.actions
+    if singleAction:
+        for i, allActions in enumerate(actionSequence):
+            for agent, actions in allActions.items():
+                assert len(actions) <= 1
+                allActions[agent] = actions[0] if actions else None
+    if asMapping:
+        return actionSequence
+    else:
+        return [tuple(actions.values()) for actions in actionSequence]
 
 # Helpers
 
@@ -67,14 +92,17 @@ def generateChecked(scenario, maxIterations):
 def checkVeneerIsInactive():
     assert veneer.activity == 0
     assert not veneer.evaluatingRequirement
-    assert len(veneer.allObjects) == 0
+    assert not veneer.allObjects
     assert veneer.egoObject is None
-    assert len(veneer.globalParameters) == 0
-    assert len(veneer.externalParameters) == 0
-    assert len(veneer.pendingRequirements) == 0
-    assert len(veneer.inheritedReqs) == 0
-    assert len(veneer.behaviors) == 0
-    assert len(veneer.monitors) == 0
+    assert not veneer._globalParameters
+    assert not veneer.lockedParameters
+    assert not veneer.lockedModel
+    assert not veneer.externalParameters
+    assert not veneer.pendingRequirements
+    assert not veneer.inheritedReqs
+    assert not veneer.behaviors
+    assert not veneer.monitors
+    assert not veneer.simulatorFactory
     assert veneer.currentSimulation is None
     assert veneer.currentBehavior is None
 

@@ -3,8 +3,8 @@ import pytest
 
 from scenic.core.errors import RuntimeParseError
 
-from tests.utils import (compileScenic, sampleScene, sampleActions, sampleEgoActions,
-                         sampleEgoActionsFromScene, checkErrorLineNumber)
+from tests.utils import (compileScenic, sampleScene, sampleActions, sampleActionsFromScene,
+                         sampleEgoActions, sampleEgoActionsFromScene, checkErrorLineNumber)
 
 ## Dynamic state
 
@@ -209,6 +209,37 @@ def test_terminate_when():
     actions = sampleEgoActions(scenario, maxSteps=3)
     assert tuple(actions) == (1,)
 
+# Requirements
+
+def test_behavior_require():
+    scenario = compileScenic("""
+        behavior Foo():
+            while True:
+                take self.foo
+                require self.foo < 0
+        ego = Object with foo (-1, 1), with behavior Foo
+    """)
+    for i in range(50):
+        actions = sampleEgoActions(scenario, maxSteps=2, maxIterations=1, maxScenes=50)
+        assert len(actions) == 2
+        assert actions[0] < 0
+        assert actions[0] == actions[1]
+
+def test_behavior_require_2():
+    scenario = compileScenic("""
+        behavior Foo():
+            x = (-1, 1)
+            while True:
+                take x
+                require x < 0
+        ego = Object with behavior Foo
+    """)
+    for i in range(50):
+        actions = sampleEgoActions(scenario, maxSteps=2, maxIterations=50, maxScenes=1)
+        assert len(actions) == 2
+        assert actions[0] < 0
+        assert actions[0] == actions[1]
+
 # Reuse
 
 def test_behavior_reuse():
@@ -219,7 +250,8 @@ def test_behavior_reuse():
         'Object at 10@10, with behavior Foo(5)'
     )
     actions = sampleActions(scenario)
-    assert tuple(actions) == ((3, 5),)
+    assert len(actions) == 1
+    assert tuple(actions[0]) == (3, 5)
 
 def test_behavior_reuse_2():
     scenario = compileScenic(
@@ -232,6 +264,31 @@ def test_behavior_reuse_2():
     assert len(actions) == 1
     action1, action2 = actions[0]
     assert action1 != action2
+
+# Ordering
+
+def test_behavior_ordering_default():
+    scenario = compileScenic("""
+        count = 0
+        behavior Foo():
+            global count
+            count += 1
+            take count
+        Object with name 'A', with behavior Foo
+        Object with name 'B', at 10@0, with behavior Foo
+        ego = Object with name 'C', at 20@0, with behavior Foo
+    """)
+    scene = sampleScene(scenario)
+    objsByName = {}
+    for obj in scene.objects:
+        objsByName[obj.name] = obj
+    actions = sampleActionsFromScene(scene, asMapping=True)
+    assert len(actions) == 1
+    actions = actions[0]
+    assert actions[objsByName['C']] == 1
+    assert actions[objsByName['A']] == 2
+    assert actions[objsByName['B']] == 3
+    assert tuple(actions.keys()) == scene.objects
 
 # Nesting (sub-behaviors)
 

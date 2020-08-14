@@ -66,18 +66,21 @@ import scenic.syntax.relations as relations
 
 ### THE TOP LEVEL: compiling a Scenic program
 
-def scenarioFromString(string, filename='<string>', cacheImports=False):
+def scenarioFromString(string, params={}, model=None, filename='<string>', cacheImports=False):
 	"""Compile a string of Scenic code into a `Scenario`.
 
 	The optional **filename** is used for error messages."""
 	stream = io.BytesIO(string.encode())
-	return scenarioFromStream(stream, filename=filename, cacheImports=cacheImports)
+	return scenarioFromStream(stream, params=params, model=model,
+	                          filename=filename, cacheImports=cacheImports)
 
-def scenarioFromFile(path, cacheImports=False):
+def scenarioFromFile(path, params={}, model=None, cacheImports=False):
 	"""Compile a Scenic file into a `Scenario`.
 
 	Args:
 		path (str): path to a Scenic file
+		params (dict): global parameters to override
+		model (str): Scenic module to use as world model
 		cacheImports (bool): Whether to cache any imported Scenic modules.
 		  The default behavior is to not do this, so that subsequent attempts
 		  to import such modules will cause them to be recompiled. If it is
@@ -99,16 +102,17 @@ def scenarioFromFile(path, cacheImports=False):
 	directory, name = os.path.split(head)
 
 	with open(path, 'rb') as stream:
-		return scenarioFromStream(stream, filename=fullpath, path=path,
-		                          cacheImports=cacheImports)
+		return scenarioFromStream(stream, params=params, model=model,
+		                          filename=fullpath, path=path, cacheImports=cacheImports)
 
-def scenarioFromStream(stream, filename='<stream>', path=None, cacheImports=False):
+def scenarioFromStream(stream, params={}, model=None,
+                       filename='<stream>', path=None, cacheImports=False):
 	"""Compile a stream of Scenic code into a `Scenario`."""
 	# Compile the code as if it were a top-level module
 	oldModules = list(sys.modules.keys())
 	try:
 		with topLevelNamespace(path) as namespace:
-			compileStream(stream, namespace, filename=filename)
+			compileStream(stream, namespace, params=params, model=model, filename=filename)
 	finally:
 		if not cacheImports:
 			toRemove = []
@@ -139,7 +143,7 @@ def topLevelNamespace(path=None):
 	finally:
 		del sys.path[0]
 
-def compileStream(stream, namespace, filename='<stream>'):
+def compileStream(stream, namespace, params={}, model=None, filename='<stream>'):
 	"""Compile a stream of Scenic code and execute it in a namespace.
 
 	The compilation procedure consists of the following main steps:
@@ -169,11 +173,12 @@ def compileStream(stream, namespace, filename='<stream>'):
 	# pull in new constructor (Scenic class) definitions, which change the way
 	# subsequent tokens are transformed)
 	blocks = partitionByImports(tokens)
-	veneer.activate()
+	veneer.activate(params, model)
 	newSourceBlocks = []
 	try:
 		# Execute preamble
 		exec(compile(preamble, '<veneer>', 'exec'), namespace)
+		namespace[namespaceReference] = namespace
 		# Execute each block
 		for blockNum, block in enumerate(blocks):
 			# Find all custom constructors defined so far (possibly imported)
@@ -260,11 +265,21 @@ for imp in internalFunctions:
 
 ## Built-in functions
 
-builtinFunctions = { 'resample', 'verbosePrint', 'simulation' }
+builtinFunctions = { 'resample', 'verbosePrint', 'simulation', 'localPath' }
 
 # sanity check: implementations of built-in functions actually exist
 for imp in builtinFunctions:
 	assert imp in api, imp
+
+## Built-in names (values which cannot be overwritten)
+
+globalParametersName = 'globalParameters'
+
+builtinNames = { globalParametersName }
+
+# sanity check: built-in names actually exist
+for name in builtinNames:
+	assert name in api, name
 
 ## Simple statements
 
@@ -281,15 +296,23 @@ waitStatement = 'wait'				# statement invoking a no-op action
 terminateStatement = 'terminate'	# statement ending the simulation
 abortStatement = 'abort'			# statement ending a try-interrupt statement
 
+modelStatement = 'model'
+namespaceReference = '_Scenic_module_namespace'		# used in the implementation of 'model'
+
+simulatorStatement = 'simulator'
+
 oneWordStatements = {	# TODO clean up
 	paramStatement, mutateStatement, requireStatement,
 	actionStatement, waitStatement, terminateStatement,
-	abortStatement
+	abortStatement, simulatorStatement
 }
 twoWordStatements = { requireAlwaysStatement, terminateWhenStatement }
 
 # statements implemented by functions
-functionStatements = { requireStatement, paramStatement, mutateStatement }
+functionStatements = {
+	requireStatement, paramStatement, mutateStatement,
+	modelStatement, simulatorStatement
+}
 twoWordFunctionStatements = { requireAlwaysStatement, terminateWhenStatement }
 def functionForStatement(tokens):
 	return '_'.join(tokens) if isinstance(tokens, tuple) else tokens
@@ -337,7 +360,7 @@ interruptExceptMarker = '_Scenic_interrupt_'
 # we still recognize 'constructor' for backwards-compatibility
 constructorStatements = ('class', 'constructor')
 
-Constructor = namedtuple('Constructor', ('name', 'parent'))
+Constructor = namedtuple('Constructor', ('name', 'bases'))
 
 builtinSpecifiers = {
 	# position
@@ -490,9 +513,12 @@ illegalConstructs = {
 	('async', 'def'),		# used to parse behaviors, so disallowed otherwise
 }
 
-keywords = (set(constructorStatements) | {monitorStatement}
-	| internalFunctions | oneWordStatements
-	| replacements.keys())
+keywords = (
+	set(constructorStatements)
+	| (oneWordStatements - {simulatorStatement})
+	| internalFunctions
+	| replacements.keys()
+)
 
 ### TRANSLATION PHASE ONE: handling imports
 
@@ -543,7 +569,7 @@ class ScenicLoader(importlib.abc.InspectLoader):
 		# objects, parameters, etc. from this one
 		if veneer.isActive():
 			veneer.allObjects.extend(module._objects)
-			veneer.globalParameters.update(module._params)
+			veneer._globalParameters.update(getattr(module, globalParametersName))
 			veneer.externalParameters.extend(module._externalParams)
 			veneer.inheritedReqs.extend(module._requirements)
 			veneer.behaviors.extend(module._behaviors)
@@ -568,13 +594,20 @@ sys.meta_path.insert(0, ScenicMetaFinder())
 ## Miscellaneous utilities
 
 def partitionByImports(tokens):
-	"""Partition the tokens into blocks ending with import statements."""
+	"""Partition the tokens into blocks ending with import statements.
+
+	We avoid splitting top-level try-except statements, to allow the pattern of trying
+	to import an optional module and catching an ImportError. If someone tries to define
+	objects inside such a statement, woe unto them.
+	"""
 	blocks = []
 	currentBlock = []
 	duringImport = False
+	seenTry = False
 	haveImported = False
 	finishLine = False
 	parenLevel = 0
+	tokens = Peekable(tokens)
 	for token in tokens:
 		startNewBlock = False
 		if token.exact_type == LPAR:
@@ -590,13 +623,21 @@ def partitionByImports(tokens):
 		else:
 			assert not duringImport
 			finishLine = True
-			if token.type == NAME and token.string == 'import' or token.string == 'from':
-				duringImport = True
-			elif token.type in (NEWLINE, NL, COMMENT, ENCODING):
+			if token.type in (DEDENT, NEWLINE, NL, COMMENT, ENCODING):
 				finishLine = False
-			elif haveImported:
-				# could use new constructors; needs to be in a new block
-				startNewBlock = True
+				if (seenTry and token.type == DEDENT and token.start[1] == 0
+				    and peek(tokens).string not in ('except', 'else', 'finally')):
+					seenTry = False
+					haveImported = True 	# just in case the try contained imports
+			elif token.start[1] == 0:
+				if token.string in ('import', 'from', modelStatement):
+					duringImport = True
+				else:
+					if haveImported:
+						# could use new constructors; needs to be in a new block
+						startNewBlock = True
+					if token.string == 'try':
+						seenTry = True
 		if startNewBlock:
 			blocks.append(currentBlock)
 			currentBlock = [token]
@@ -613,12 +654,11 @@ def findConstructorsIn(namespace):
 		if inspect.isclass(value) and issubclass(value, Constructible):
 			if name in builtinConstructors:
 				continue
-			parent = None
+			parents = []
 			for base in value.__bases__:
 				if issubclass(base, Constructible):
-					assert parent is None
-					parent = base
-			constructors.append(Constructor(name, parent.__name__))
+					parents.append(base.__name__)
+			constructors.append(Constructor(name, parents))
 	return constructors
 
 ### TRANSLATION PHASE TWO: translation at the level of tokens
@@ -662,32 +702,27 @@ class TokenTranslator:
 	def parseError(self, tokenOrLine, message):
 		return TokenParseError(tokenOrLine, self.filename, message)
 
-	def createConstructor(self, name, parent):
-		if parent is None:
-			parent = 'Object'		# default superclass
-		self.constructors[name] = Constructor(name, parent)
-		return parent
+	def createConstructor(self, name, parents):
+		parents = tuple(parents)
+		assert parents
+		self.constructors[name] = Constructor(name, parents)
 
 	def specifiersForConstructor(self, const):
 		# Currently all specifiers can be used with any constructor;
 		# I'm leaving this here in case we later allow custom specifiers to be inherited
-		name, parent = self.constructors[const]
-		if parent is None or parent not in self.constructors:
-			return builtinSpecifiers
-		else:
-			return self.specifiersForConstructor(parent)
+		return builtinSpecifiers
+		#name, parents = self.constructors[const]
 
 	def translate(self, tokens):
 		"""Do the actual translation of the token stream."""
 		tokens = Peekable(tokens)
 		newTokens = []
 		functionStack = []
-		inConstructor = False	# inside a constructor or one of its specifiers
 		specifiersIndented = False
 		parenLevel = 0
 		row, col = 0, 0		# position of next token to write out
 		orow, ocol = 0, 0	# end of last token in the original source
-		startOfLine = True		# TODO improve hack?
+		startOfLine = True
 		constructors = self.constructors
 
 		for token in tokens:
@@ -771,7 +806,6 @@ class TokenTranslator:
 			context, startLevel = functionStack[-1] if functionStack else (None, None)
 			inConstructorContext = (context in constructors and parenLevel == startLevel)
 			if inConstructorContext:
-				inConstructor = True
 				allowedPrefixOps = self.specifiersForConstructor(context)
 				allowedInfixOps = dict()
 			else:
@@ -808,40 +842,36 @@ class TokenTranslator:
 							raise self.parseError(nextToken,
 							    f'invalid class name "{nextString}"')
 						nextToken = next(tokens)	# consume name
-						parent = None
-						pythonClass = False
+						bases, scenicParents = [], []
 						if peek(tokens).exact_type == LPAR:		# superclass specification
 							next(tokens)
-							nextToken = next(tokens)
-							parent = nextToken.string
-							if nextToken.exact_type != NAME:
+							while (nextToken := next(tokens)).exact_type != RPAR:
+								base = nextToken.string
+								if nextToken.exact_type != NAME:
+									raise self.parseError(nextToken,
+									    f'invalid superclass "{base}"')
+								bases.append(base)
+								if base in self.constructors:
+									scenicParents.append(base)
+								if peek(tokens).exact_type == COMMA:
+									next(tokens)
+							if not scenicParents and tstring != 'class':
 								raise self.parseError(nextToken,
-								    f'invalid superclass "{parent}"')
-							if parent not in self.constructors:
-								if tstring != 'class':
-									raise self.parseError(nextToken,
-									    f'superclass "{parent}" is not a Scenic class')
-								# appears to be a Python class definition
-								pythonClass = True
-							else:
-								nextToken = next(tokens)
-								if nextToken.exact_type != RPAR:
-									raise self.parseError(nextToken,
-									                      'malformed class definition')
+								    f'Scenic class definition with no Scenic superclasses')
+						if peek(tokens).exact_type != COLON:
+							raise self.parseError(peek(tokens), 'malformed class definition')
+						if not bases:
+							bases = scenicParents = ('Object',)		# default superclass
+						if scenicParents:
+							self.createConstructor(nextString, scenicParents)
 						injectToken((NAME, 'class'), spaceAfter=1)
 						injectToken((NAME, nextString))
 						injectToken((LPAR, '('))
-						if pythonClass:		# pass Python class definitions through unchanged
-							while nextToken.exact_type != COLON:
-								injectToken(nextToken)
-								nextToken = next(tokens)
-							injectToken(nextToken)
-						else:
-							if peek(tokens).exact_type != COLON:
-								raise self.parseError(nextToken, 'malformed class definition')
-							parent = self.createConstructor(nextString, parent)
-							injectToken((NAME, parent))
-							injectToken((RPAR, ')'))
+						injectToken((NAME, bases[0]))
+						for base in bases[1:]:
+							injectToken((COMMA, ','), spaceAfter=1)
+							injectToken((NAME, base))
+						injectToken((RPAR, ')'))
 						skip = True
 						matched = True
 						endToken = nextToken
@@ -867,12 +897,13 @@ class TokenTranslator:
 						advance()	# consume second word
 						skip = True
 						matched = True
-					elif twoWords == interruptWhenStatement:	# special case for interrupt when
+					elif startOfLine and twoWords == interruptWhenStatement:
+						# special case for interrupt when
 						injectToken((NAME, 'except'), spaceAfter=1)
 						callFunction(interruptExceptMarker)
 						advance()	# consume second word
 						matched = True
-					elif twoWords in twoWordStatements:	# 2-word statement
+					elif startOfLine and twoWords in twoWordStatements:	# 2-word statement
 						wrapStatementCall()
 						function = functionForStatement(twoWords)
 						callFunction(function)
@@ -881,7 +912,8 @@ class TokenTranslator:
 					elif inConstructorContext and tstring == 'with':	# special case for 'with' specifier
 						callFunction('With', argument=f'"{nextString}"')
 						advance()	# consume property name
-					elif tstring == requireStatement and nextString == '[':		# special case for require[p]
+					elif startOfLine and tstring == requireStatement and nextString == '[':
+						# special case for require[p]
 						next(tokens)	# consume '['
 						nextToken = next(tokens)
 						if nextToken.exact_type != NUMBER:
@@ -912,10 +944,25 @@ class TokenTranslator:
 						skip = True
 					elif inConstructorContext:		# couldn't match any 1- or 2-word specifier
 						raise self.parseError(token, f'unknown specifier "{tstring}"')
-					elif tstring in oneWordStatements:		# 1-word statement
+					elif startOfLine and tstring in oneWordStatements:		# 1-word statement
 						wrapStatementCall()
 						callFunction(tstring)
-					elif tstring in self.constructors:      # instance definition
+					elif token.start[1] == 0 and tstring == modelStatement:		# model statement
+						components = []
+						while peek(tokens).exact_type not in (COMMENT, NEWLINE):
+							nextToken = next(tokens)
+							if nextToken.exact_type != NAME and nextToken.string != '.':
+								raise self.parseError(nextToken, 'invalid module name')
+							components.append(nextToken.string)
+						if not components:
+							raise self.parseError(token, 'model statement is missing module name')
+						components.append("'")
+						literal = "'" + ''.join(components)
+						callFunction(modelStatement, argument=namespaceReference)
+						injectToken((STRING, literal))
+						skip = True
+					elif (tstring in self.constructors
+						  and peek(tokens).exact_type != RPAR):      # instance definition
 						callFunction(tstring)
 					elif tstring in replacements:	# direct replacement
 						for tok in replacements[tstring]:
@@ -937,6 +984,7 @@ class TokenTranslator:
 					functionStack.pop()
 					injectToken((RPAR, ')'))
 					context, startLevel = (None, 0) if len(functionStack) == 0 else functionStack[-1]
+				inConstructor = any(context in constructors for context, sl in functionStack)
 				if inConstructor and parenLevel == startLevel and ttype == COMMA:		# starting a new specifier
 					while functionStack and context not in constructors:
 						functionStack.pop()
@@ -964,7 +1012,6 @@ class TokenTranslator:
 						injectToken(nextToken)
 						specifiersIndented = True
 				elif ttype == NEWLINE or ttype == ENDMARKER or ttype == COMMENT:	# end of line
-					inConstructor = False
 					if parenLevel != 0:
 						raise self.parseError(token, 'unmatched parens/brackets')
 					interrupt = False
@@ -1166,6 +1213,12 @@ class ASTSurgeon(NodeTransformer):
 		else:
 			raise RuntimeError(f'unknown object {node} encountered during AST surgery')
 
+	def visit_Name(self, node):
+		if node.id in builtinNames:
+			if not isinstance(node.ctx, Load):
+				raise self.parseError(node, f'unexpected keyword "{node.id}"')
+		return node
+
 	def visit_BinOp(self, node):
 		"""Convert infix operators to calls to the corresponding Scenic operator implementations."""
 		left = node.left
@@ -1237,13 +1290,18 @@ class ASTSurgeon(NodeTransformer):
 				assert isinstance(prob, Constant) and isinstance(prob.value, (float, int))
 				newArgs.append(prob)
 			return copy_location(Expr(Call(func, newArgs, [])), node)
+		elif func.id == simulatorStatement:
+			self.validateSimpleCall(node, 1)
+			sim = self.visit(node.args[0])
+			closure = copy_location(Lambda(noArgs, sim), sim)
+			return copy_location(Expr(Call(func, [closure], [])), node)
 		elif func.id == actionStatement:		# Action statement
-			self.validateSimpleCall(node, 1, onlyInBehaviors=True)
-			action = self.visit(node.args[0])
+			self.validateSimpleCall(node, (1, None), onlyInBehaviors=True)
+			action = Tuple(self.visit(node.args), Load())
 			return self.generateActionInvocation(node, action)
 		elif func.id == waitStatement:		# Wait statement
 			self.validateSimpleCall(node, 0, onlyInBehaviors=True)
-			return self.generateActionInvocation(node, None)
+			return self.generateActionInvocation(node, Constant((), None))
 		elif func.id == terminateStatement:		# Terminate statement
 			self.validateSimpleCall(node, 0, onlyInBehaviors=True)
 			termination = Call(Name(createTerminationAction, Load()),
@@ -1452,8 +1510,10 @@ class ASTSurgeon(NodeTransformer):
 		if isinstance(numArgs, tuple):
 			assert len(numArgs) == 2
 			low, high = numArgs
-			if not (low <= len(node.args) <= high):
-				raise self.parseError(node, f'"{name}" takes {low}-{high} arguments')
+			if high is not None and len(node.args) > high:
+				raise self.parseError(node, f'"{name}" takes at most {high} argument(s)')
+			if len(node.args) < low:
+				raise self.parseError(node, f'"{name}" takes at least {low} argument(s)')
 		elif len(node.args) != numArgs:
 			raise self.parseError(node, f'"{name}" takes exactly {numArgs} argument(s)')
 		if len(node.keywords) != 0:
@@ -1685,8 +1745,9 @@ def storeScenarioStateIn(namespace, requirementSyntax, filename):
 	namespace['_egoObject'] = veneer.egoObject
 
 	# Extract global parameters
-	namespace['_params'] = veneer.globalParameters
-	for name, value in veneer.globalParameters.items():
+	savedParams = veneer.globalParameters._clone_table()
+	namespace[globalParametersName] = savedParams
+	for name, value in savedParams.items():
 		if needsLazyEvaluation(value):
 			raise InvalidScenarioError(f'parameter {name} uses value {value}'
 			                           ' undefined outside of object definition')
@@ -1749,7 +1810,8 @@ def storeScenarioStateIn(namespace, requirementSyntax, filename):
 		closure = makeClosure(requirement.condition, bindings, ego, line)
 		finalReqs.append(veneer.CompiledRequirement(requirement, closure))
 
-	# Extract monitors
+	# Extract simulator, behaviors, and monitors
+	namespace['_simulatorFactory'] = veneer.simulatorFactory
 	namespace['_behaviors'] = veneer.behaviors
 	namespace['_monitors'] = veneer.monitors
 
@@ -1761,6 +1823,7 @@ def storeScenarioStateIn(namespace, requirementSyntax, filename):
 			behaviorNamespaces[modName] = ns
 		else:
 			assert behaviorNamespaces[modName] is ns
+			return
 		for name, value in ns.items():
 			if isinstance(value, types.ModuleType) and getattr(value, '_isScenicModule', False):
 				registerNamespace(value.__name__, value.__dict__)
@@ -1795,18 +1858,10 @@ def constructScenarioFrom(namespace):
 	else:
 		workspace = None
 
-	# Extract simulator, if one is specified
-	if 'simulator' in namespace:
-		simulator = namespace['simulator']
-		if not isinstance(simulator, Simulator):
-			raise InvalidScenarioError(f'simulator {simulator} is not a Simulator')
-	else:
-		simulator = None
-
 	# Create Scenario object
-	scenario = Scenario(workspace, simulator,
+	scenario = Scenario(workspace, namespace['_simulatorFactory'],
 	                    namespace['_objects'], namespace['_egoObject'],
-	                    namespace['_params'], namespace['_externalParams'],
+	                    namespace[globalParametersName], namespace['_externalParams'],
 	                    namespace['_requirements'], namespace['_requirementDeps'],
                         namespace['_monitors'], namespace['_behaviorNamespaces'])
 

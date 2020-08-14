@@ -2,19 +2,14 @@
 # Definition: While performing a maneuver, the ego-vehicle finds an obstacle / unexpected entity on the road and must perform an emergency brake or an avoidance maneuver. 
 # ego at intersection where a maneuver is available, ego takes any turn. obstacle is stationary according to sheets... but i want it to move
 
-import lgsvl
-import scenic.simulators.lgsvl.actions as actions
-import time
-from scenic.simulators.lgsvl.simulator import LGSVLSimulator
-from scenic.simulators.lgsvl.map import setMapPath
-setMapPath(__file__, 'maps/borregasave.xodr')
-from scenic.simulators.lgsvl.model import *
-import scenic.simulators.domains.driving.roads as roads
-
-simulator = LGSVLSimulator('BorregasAve')
+param map = localPath('maps/borregasave.xodr')
+param lgsvl_map = 'BorregasAve'
 param time_step = 1.0/10
 
+model scenic.simulators.lgsvl.model
+
 # CONSTANTS
+TERMINATE_TIME = 20 / globalParameters.time_step
 index1 = Uniform(0, 1, 2, 3)
 
 # GEOMETRY
@@ -27,6 +22,7 @@ intersection = Uniform(*fourLane)
 lane = intersection.incomingLanes[index1]
 pos = (OrientedPoint at lane.centerline[-1]) offset by (-2, 2) @ 0 # at last stretch of centerline, off center by at most 2
 turn = Uniform(*lane.maneuvers)
+trajectory = [turn.startLane.centerline, turn.connectingLane.centerline, turn.endLane.centerline]
 pt = Point on turn.connectingLane.centerline # point in the ego's path that the pedestrian should walk towards
 
 # BEHAVIOR
@@ -42,21 +38,20 @@ behavior CrossingBehavior():
 			egoSpeed = ego.speed
 		walkSpeed = randomSpeedup + ((egoSpeed * walkDist) / egoDist)
 		if(egoDist <= startWalkingDist):
-			take actions.SetSpeedAction(30)
+			take SetSpeedAction(30)
 		else:
-			take actions.SetSpeedAction(0.0)
+			take SetSpeedAction(0.0)
 
 behavior EgoBehavior():
-	throttleStrength = (0, 1)
-	while True:
-		gain = 0.1
-		delta = self.heading relative to turn.connectingLane.centerline.orientation
-		take actions.SetSteerAction(-gain * delta)
-		take actions.SetThrottleAction(throttleStrength)
+	brakeIntensity = (0.7, 1)
+	try:
+		FollowTrajectoryBehavior(target_speed=(20, 30), trajectory=trajectory)
+	interrupt when (distance to p) < 10:
+		take SetThrottleAction(0), SetBrakeAction(brakeIntensity)
 
 
 # PLACEMENT
-ego = EgoCar at pos, facing roadDirection, with speed 5, with behavior EgoBehavior
+ego = Car at pos, facing roadDirection, with speed 5, with behavior EgoBehavior
 
 # change this - crossings added
 # (using intersection boundary for LGSVL version since maps have no sidewalks)
@@ -66,4 +61,5 @@ p = Pedestrian at walkerSpawn offset by (-2,2) @ (-2,2),
 	with regionContainedIn None,
 	with behavior CrossingBehavior
 
-
+terminate when ego in turn.endLane
+terminate when simulation().currentTime > TERMINATE_TIME

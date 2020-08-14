@@ -1,14 +1,9 @@
 """Lead vehicle cuts in. Ego slows down and follows lead vehicle."""
 
-import scenic.simulators.carla.actions as actions
-import random
+param map = localPath('../OpenDrive/Town01.xodr')
+param carla_map = 'Town01'
 
-from scenic.core.geometry import subtractVectors
-
-from scenic.simulators.domains.driving.network import loadNetwork
-loadNetwork('/home/carla_challenge/Downloads/Town01.xodr')
-
-from scenic.simulators.carla.model import *
+model scenic.simulators.carla.model
 
 
 # ============================================================================
@@ -16,34 +11,27 @@ from scenic.simulators.carla.model import *
 # ============================================================================
 
 behavior LeadBehavior():
-	take actions.SetThrottleAction(0.3)
+	take SetThrottleAction(0.3)
 	for _ in range(3):
-		take None
+		wait
 
-	take actions.SetThrottleAction(0.7)
+	take SetThrottleAction(0.7)
 
 	while True:
-		take None
+		wait
 
 behavior EgoBehavior():
-	take actions.SetThrottleAction(0.3)
-	while True:
-		take None
+	take SetThrottleAction(0.3)
 
 laneSecs = []
 for lane in network.lanes:
 	for sec in lane.sections:
 		laneSecs.append(sec)
 
-# initLaneSec = Options(laneSecs)
-# egoPt = Options(initLaneSec.centerline)
+initLaneSec = Options(laneSecs)
 
-# Hard code for testing
-initLaneSec = laneSecs[50]
-egoPt = initLaneSec.centerline[5]
-
-leadCar = Car following roadDirection from egoPt by (10, 20),
-	with behavior LeadBehavior
-
-ego = Car at egoPt,
+ego = Car on initLaneSec.centerline,
 	with behavior EgoBehavior
+
+leadCar = Car following roadDirection by (10, 20),
+	with behavior LeadBehavior

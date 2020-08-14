@@ -1,12 +1,14 @@
 
 import scenic.simulators.carla.actions as actions
 from scenic.simulators.carla.model import roadDirection
-from scenic.simulators.domains.driving.roads import ManeuverType
+from scenic.domains.driving.roads import ManeuverType
 from scenic.core.regions import regionFromShapelyObject
 from shapely.geometry import LineString
 import math
+from scenic.domains.driving.behaviors import *	# use common driving behaviors
 from scenic.simulators.carla.blueprints import *
 from scenic.simulators.carla.model import *
+import scenic.domains.driving.controllers as controllers
 
 def concatenateCenterlines(centerlines=[]):
 	return PolylineRegion.unionAll(centerlines)
@@ -65,15 +67,16 @@ behavior FollowLaneBehavior(target_speed = 10):
 
 	# check whether self agent is vehicle:
 	is_vehicle = self.blueprint in carModels
+	dt = simulation().timestep
 
 	# instantiate longitudinal and latitudinal pid controllers
 	if is_vehicle:
-		_lon_controller = actions.PIDLongitudinalController(self, K_P=0.5, K_D=0.1, K_I=0.7)
-		_lat_controller = actions.PIDLateralController(self, K_P=0.3, K_D=0.2, K_I=0)
+		_lon_controller = controllers.PIDLongitudinalController(K_P=0.5, K_D=0.1, K_I=0.7, dt=dt)
+		_lat_controller = controllers.PIDLateralController(K_P=0.3, K_D=0.2, K_I=0, dt=dt)
 
 	else:
-		_lon_controller = actions.PIDLongitudinalController(self, K_P=0.25, K_D=0.025, K_I=0.0)
-		_lat_controller = actions.PIDLateralController(self, K_P=0.2, K_D=0.1, K_I=0.0)
+		_lon_controller = controllers.PIDLongitudinalController(K_P=0.25, K_D=0.025, K_I=0.0, dt=dt)
+		_lat_controller = controllers.PIDLateralController(K_P=0.2, K_D=0.1, K_I=0.0, dt=dt)
 
 	while True:
 
@@ -131,15 +134,16 @@ behavior FollowTrajectoryBehavior(target_speed = 10, trajectory = None):
 
 	# check whether self agent is vehicle:
 	is_vehicle = self.blueprint in carModels
+	dt = simulation().timestep
 
 	# instantiate longitudinal and latitudinal pid controllers
 	if is_vehicle:
-		_lon_controller = actions.PIDLongitudinalController(self, K_P=0.5, K_D=0.1, K_I=0.7)
-		_lat_controller = actions.PIDLateralController(self, K_P=0.3, K_D=0.2, K_I=0)
+		_lon_controller = controllers.PIDLongitudinalController(K_P=0.5, K_D=0.1, K_I=0.7, dt=dt)
+		_lat_controller = controllers.PIDLateralController(K_P=0.3, K_D=0.2, K_I=0, dt=dt)
 
 	else:
-		_lon_controller = actions.PIDLongitudinalController(self, K_P=0.25, K_D=0.025, K_I=0.0)
-		_lat_controller = actions.PIDLateralController(self, K_P=0.2, K_D=0.1, K_I=0.0)
+		_lon_controller = controllers.PIDLongitudinalController(K_P=0.25, K_D=0.025, K_I=0.0, dt=dt)
+		_lat_controller = controllers.PIDLateralController(K_P=0.2, K_D=0.1, K_I=0.0, dt=dt)
 
 	past_steer_angle = 0
 
