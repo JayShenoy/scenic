@@ -2,11 +2,39 @@
 import scenic.domains.driving.controllers as controllers
 from scenic.domains.driving.actions import *
 
+def concatenateCenterlines(centerlines=[]):
+    return PolylineRegion.unionAll(centerlines)
+
+def distance(pos1, pos2):
+    """ pos1, pos2 = (x,y) """
+    return math.sqrt(math.pow(pos1[0]-pos2[0],2) + math.pow(pos1[1]-pos2[1],2))
+
+def distanceToAnyObjs(vehicle, thresholdDistance):
+    """ checks whether there exists any obj
+    (1) in front of the vehicle, (2) within thresholdDistance """
+    objects = simulation().objects
+    for obj in objects:
+        if not (vehicle can see obj):
+            continue
+        if distance(vehicle.position, obj.position) < 0.1:
+            # this means obj==vehicle
+            pass
+        elif distance(vehicle.position, obj.position) < thresholdDistance:
+            return True
+    return False
+
+behavior WalkForwardBehavior():
+    current_sidewalk = network.sidewalkAt(self.position)
+    end_point = Uniform(*current_sidewalk.centerline.points)
+    end_vec = end_point[0] @ end_point[1]
+    normal_vec = Vector.normalized(end_vec)
+    take WalkTowardsAction(goal_position=normal_vec), SetSpeedAction(speed=1)
+
 behavior ConstantThrottleBehavior(x):
     while True:
         take SetThrottleAction(x), SetReverseAction(False), SetHandBrakeAction(False)
 
-behavior FollowLaneBehavior(target_speed = 25, network = None):
+behavior FollowLaneBehavior(target_speed = 25):
 
     # instantiate longitudinal and latitudinal pid controllers
     dt = simulation().timestep

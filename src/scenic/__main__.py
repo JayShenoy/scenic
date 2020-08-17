@@ -115,7 +115,7 @@ def runSimulation(scene, output_path):
     if args.verbosity >= 1:
         print('  Beginning simulation...')
     try:
-        output = errors.callBeginningScenicTrace(
+        result = errors.callBeginningScenicTrace(
             lambda: simulator.simulate(scene, maxSteps=args.time, verbosity=args.verbosity,
                                        maxIterations=args.max_sims_per_scene)
         )
@@ -126,10 +126,10 @@ def runSimulation(scene, output_path):
     if args.verbosity >= 1:
         totalTime = time.time() - startTime
         print(f'  Ran simulation in {totalTime:.4g} seconds.')
-    if output is None:
+    if result is None:
         return False
-    if args.record:
-        simulation.save_recordings(output_path)
+    # if args.record:
+    #     simulation.save_recordings(output_path)
     return result is not None
 
 if args.gather_stats is None:   # Generate scenes interactively until killed

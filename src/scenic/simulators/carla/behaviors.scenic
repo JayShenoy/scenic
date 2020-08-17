@@ -1,6 +1,8 @@
 
 import scenic.simulators.carla.actions as actions
-from scenic.simulators.carla.model import roadDirection
+import scenic.domains.driving.controllers as controllers
+
+# from scenic.simulators.carla.model import roadDirection
 from scenic.domains.driving.roads import ManeuverType
 from scenic.core.regions import regionFromShapelyObject
 from shapely.geometry import LineString
@@ -8,7 +10,6 @@ import math
 from scenic.domains.driving.behaviors import *	# use common driving behaviors
 from scenic.simulators.carla.blueprints import *
 from scenic.simulators.carla.model import *
-import scenic.domains.driving.controllers as controllers
 
 def concatenateCenterlines(centerlines=[]):
 	return PolylineRegion.unionAll(centerlines)
@@ -49,13 +50,18 @@ behavior WalkForwardBehavior():
 behavior ConstantThrottleBehavior(x):
     take actions.SetThrottleAction(x)
 
-behavior FollowLaneBehavior(target_speed = 10):
+behavior FollowLaneBehavior(target_speed = 10, laneToFollow=None):
 	## Follow's the lane on which the vehicle is at 
 	## As the vehicle reaches an intersection, any route (eg. straigth or turn maneuver) is randomly selected and followed
 	
 	past_steer_angle = 0
 	past_speed = 0 # making an assumption here that the agent starts from zero speed
-	current_lane = network.laneAt(self)
+	if laneToFollow is None:
+		current_lane = network.laneAt(self)
+	else:
+		print("lanetoFollow")
+		current_lane = laneToFollow
+
 	current_centerline = current_lane.centerline
 	in_turning_lane = False # assumption that the agent is not instantiated within a connecting lane
 	entering_intersection = False # assumption that the agent is not instantiated within an intersection
