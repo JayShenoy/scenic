@@ -144,20 +144,22 @@ class Orientation():
 		self.r = Rotation.from_euler('ZYX', [z, y, x], degrees=False)
 		self.q = self.r.as_quat()
 
+	# Convention: X axis is longitudinal pointing ahead, Z axis is vertical pointing downward, and Y axis is 
+	# lateral pointing to accomodate right-hand rule. 
 	@property
 	def w(self):
 		return self.q[3]
 
 	@property
-	def x(self): # Pitch
+	def x(self): # roll
 		return self.q[2]
 
 	@property
-	def y(self): # Roll
+	def y(self): # pitch 
 		return self.q[1]
 
 	@property
-	def z(self): # Yaw 
+	def z(self): # yaw 
 		return self.q[0]
 
 	def get_rotvec(self):

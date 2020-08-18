@@ -42,7 +42,6 @@ class ModifyingSpecifier(Specifier):
 	def __init__(self, prop, value, deps=None, optionals={}):
 		super().__init__(prop, value, deps, optionals)
 
-		 
 
 ## Support for property defaults
 

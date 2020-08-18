@@ -253,7 +253,7 @@ def RelativeTo(X, Y):
 			raise RuntimeParseError('"X relative to Y" with X, Y fields of different types')
 		fieldType = X.valueType if xf else Y.valueType
 		error = '"X relative to Y" with field and value of different types'
-		def helper(context):
+		def helper(context, spec):
 			pos = context.position.toVector()
 			xp = X[pos] if xf else toType(X, fieldType, error)
 			yp = Y[pos] if yf else toType(Y, fieldType, error)
@@ -647,12 +647,12 @@ def leftSpecHelper(syntax, pos, dist, axis, toComponents, makeOffset):
 	else:
 		raise RuntimeParseError(f'"{syntax} X by D" with D not a number or vector')
 	if isinstance(pos, OrientedPoint):		# TODO too strict?
-		val = lambda self: pos.relativize(makeOffset(self, dx, dy))
+		val = lambda self, spec: pos.relativize(makeOffset(self, dx, dy))
 		new = DelayedArgument({axis}, val)
 		extras.add('heading')
 	else:
 		pos = toVector(pos, f'specifier "{syntax} X" with X not a vector')
-		val = lambda self: pos.offsetRotated(self.heading, makeOffset(self, dx, dy))
+		val = lambda self, spec: pos.offsetRotated(self.heading, makeOffset(self, dx, dy))
 		new = DelayedArgument({axis, 'heading'}, val)
 	return Specifier('position', new, optionals=extras)
 

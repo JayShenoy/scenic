@@ -24,7 +24,7 @@ class Rover:
 class Debris:
 	"""Abstract class for debris scattered randomly in the workspace."""
 	position: Point in workspace
-	heading: (-math.pi, math.pi)
+	heading: Range(-math.pi, math.pi)
 
 class BigRock(Debris):
 	"""Large rock."""
@@ -41,5 +41,5 @@ class Rock(Debris):
 class Pipe(Debris):
 	"""Pipe with variable length."""
 	width: 0.2
-	height: (0.5, 1.5)
+	height: Range(0.5, 1.5)
 	webotsType: 'PIPE'

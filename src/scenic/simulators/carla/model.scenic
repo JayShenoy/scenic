@@ -20,13 +20,13 @@ intersection = workspace.intersection_region
 # lane id to polygon, one dict per lane section.
 laneSectionDict = workspace.lane_sec_dict
 
-precipitation = Options({0: 70, 1: 30}) * (0, 100)
+precipitation = Options({0: 70, 1: 30}) * Range(0, 100)
 param precipitation = precipitation
-param precipitation_deposits = (precipitation, 100)
-param cloudiness = (precipitation, 100)
-param wind_intensity = (0, 100)
-param sun_azimuth_angle = (0, 360)
-param sun_altitude_angle = (-90, 90)
+param precipitation_deposits = Range(precipitation, 100)
+param cloudiness = Range(precipitation, 100)
+param wind_intensity = Range(0, 100)
+param sun_azimuth_angle = Range(0, 360)
+param sun_altitude_angle = Range(-90, 90)
 
 # TODO: Get vehicle models, dimensions from Carla
 class Vehicle:
@@ -61,14 +61,14 @@ class Truck(Vehicle):
 class Pedestrian:
     regionContainedIn: sidewalk
     position: Point on sidewalk
-    heading: (0, 360) deg
+    heading: Range(0, 360) deg
     width: 0.5
     height: 0.5
 
 class Prop:
     regionContainedIn: road
     position: Point on road
-    heading: (0, 360) deg
+    heading: Range(0, 360) deg
     width: 0.5
     height: 0.5
 
