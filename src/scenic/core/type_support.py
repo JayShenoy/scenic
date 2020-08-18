@@ -95,13 +95,17 @@ def coerce(thing, ty):
 		return float(thing)
 	elif ty is Heading:
 		if isinstance(thing, tuple) or isinstance(thing, list):
-			thing = Orientation(thing[0], thing[1], thing[2]) if len(thing) == 3 else Orientation(thing[0]) # TODO: @Matthew Implement 
-			return thing.toHeading() # TODO: @Matthew Need to check if length of tuple/list is 2 (undefined semantics)
+			if len(thing) == 2: 
+				raise ValueError("Heading must have 1 or 3 components") # TODO: @Matthew error handle incorrectly sized orientations
+			if len(thing) == 3: thing = Orientation(thing[0], thing[1], thing[2])
+			else: return thing[0].toHeading() if hasattr(thing[0], 'toHeading') else float(thing[0])
 		return thing.toHeading() if hasattr(thing, 'toHeading') else float(thing)
 	elif ty is Vector:
 		if isinstance(thing, tuple) or isinstance(thing, list):
-			# TODO: @Matthew Is this a proper length check? 
-			thing = Vector(thing[0], thing[1], thing[2]) if len(thing) == 3 else Vector(thing[0], thing[1])
+			if   len(thing) == 1: thing = Vector(thing[0])
+			elif len(thing) == 2: thing = Vector(thing[0], thing[1])
+			elif len(thing) == 3: thing = Vector(thing[0], thing[1], thing[2])
+			else: raise ValueError("Vectors cannot be greater than length 3") # TODO: @Matthew error handle incorrectly sized Vectors 
 			return thing.toVector()
 		return thing.toVector()
 	else:

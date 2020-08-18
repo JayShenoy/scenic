@@ -141,46 +141,46 @@ def vectorDistributionMethod(method):
 class Orientation():
 	"""A quaternion representation of an orientation whose rotation axis and angle can be distributions."""
 	def __init__(self, x, y=0, z=0):
-		self.r = Rotation.from_euler('XYZ', [x, y, z], degrees=False)
+		self.r = Rotation.from_euler('ZYX', [z, y, x], degrees=False)
 		self.q = self.r.as_quat()
-
-	@property
-	def x(self): 
-		return self.q[0]
-
-	@property
-	def y(self):
-		return self.q[1]
-
-	@property
-	def z(self):
-		return self.q[2]
 
 	@property
 	def w(self):
 		return self.q[3]
 
+	@property
+	def x(self): # Pitch
+		return self.q[2]
+
+	@property
+	def y(self): # Roll
+		return self.q[1]
+
+	@property
+	def z(self): # Yaw 
+		return self.q[0]
+
 	def get_rotvec(self):
-		r = R.from_quat(self.q)
+		r = Rotation.from_quat(self.q)
 		return r.as_rotvec()
 
-	def get_rotation_angle(self):
+	def get_rotangle(self):
 		rotvec = self.get_rotvec()
-		return rotvec.magnitude()
+		r = Rotation.from_rotvec(rotvec)
+		return r.magnitude()
 
 	def get_euler(self):
-		r = R.from_quat(self.q)
+		r = Rotation.from_quat(self.q)
 		return r.as_euler('XYZ', degrees=False)
+
+	def toHeading(self):
+		# TODO: @Matthew Inherit toHeading() or implement its own?
+		return self.get_euler()
 
 	def __mul__(self, other):
 		if type(other) is not Orientation:
 			return NotImplemented
 		return other.q * self.q
-
-	def __eq__(self, other):
-		if type(other) is not Orientation:
-			return NotImplemented
-		return other.q == self.q
 
 	def __getitem__(self, index):
 		return self.q[index]
@@ -190,7 +190,7 @@ class Orientation():
 
 class Vector(Samplable, collections.abc.Sequence):
 	"""A 2D vector, whose coordinates can be distributions."""
-	def __init__(self, x, y, z=0):
+	def __init__(self, x, y=0, z=0):
 		self.coordinates = (x, y, z)
 		super().__init__(self.coordinates)
 

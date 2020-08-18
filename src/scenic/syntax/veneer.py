@@ -258,7 +258,7 @@ def RelativeTo(X, Y):
 			xp = X[pos] if xf else toType(X, fieldType, error)
 			yp = Y[pos] if yf else toType(Y, fieldType, error)
 			return xp + yp
-		return DelayedArgument({'position'}, helper)
+		return DelayedArgument({'position'}, helper) # TODO: @Matthew Is it a modifying specifier? -> Needs specifier info 
 	else:
 		if isinstance(X, OrientedPoint):	# TODO too strict?
 			if isinstance(Y, OrientedPoint):
@@ -375,7 +375,9 @@ def CanSee(X, Y):
 def With(prop, val):
 	"""The 'with <property> <value>' specifier.
 
-	Specifies the given property, with no dependencies.
+	Specifies the given property, with no dependencies. If composed with 'relative to Y',
+	the given property is specified with respect to the same property of Y (i.e., value
+	is added to the value of the property of Y).
 	"""
 	return Specifier(prop, val)
 
@@ -391,6 +393,9 @@ def In(region):
 
 	Specifies 'position', with no dependencies. Optionally specifies 'heading'
 	if the given Region has a preferred orientation.
+	
+	If composed with 'on <X>', X must intersect the region. This specifies
+	position and orientation. 
 	"""
 	region = toType(region, Region, 'specifier "in R" with R not a Region')
 	extras = {'heading'} if alwaysProvidesOrientation(region) else {}
@@ -400,8 +405,11 @@ def On(region):
 	"""The 'on <X>' specifier.
 
 	Specifies 'position', with no dependencies. Optionally specifies 'heading'
-	if the given Region has a preferred orientation. May be composed with a single
-	specifier, with the exception of another ModifyingSpecifier and 'at <vector>'
+	if the given Region has a preferred orientation. 
+	
+	May be composed with a single specifier, with the exception of another 
+	ModifyingSpecifier and 'at <vector>' specifier. Specifies 'position' and 
+	the roll and pitch and 'orientation'.
 
 	Allowed forms:
 		on <region>
@@ -486,12 +494,12 @@ def Facing(heading):
 	"""The 'facing X' polymorphic specifier.
 
 	Specifies yaw and pitch angles of 'heading', with dependencies depending on the form:
-		facing <number> -- no dependencies;
-		facing <field> -- depends on 'position';
-		facing <vector> -- no dependencies;
+		facing <number> -- depends on 'roll';
+		facing <field> -- depends on 'position', 'roll';
+		facing <vector> -- depends on 'roll';
 	"""
 	if isinstance(heading, VectorField):
-		return Specifier('heading', DelayedArgument({'position'},
+		return Specifier('heading', DelayedArgument({'position', 'specifier'},
 		                                            lambda self, spec: heading[self.position]))
 	else:
 		heading = toHeading(heading, 'specifier "facing X" with X not a heading or vector field')
@@ -500,39 +508,42 @@ def Facing(heading):
 def FacingToward(pos):
 	"""The 'facing toward <vector>' specifier.
 
-	Specifies the yaw angle of 'heading', depending on 'position'.
+	Specifies the yaw angle of 'heading', depending on 'position', 'roll',
+	and 'pitch'.
 	"""
 	pos = toVector(pos, 'specifier "facing toward X" with X not a vector')
-	return Specifier('heading', DelayedArgument({'position'}, # Depend on 'roll' 
+	return Specifier('heading', DelayedArgument({'position', 'specifer'}, # Depend on 'roll' 
 	                                            lambda self, spec: self.position.angleTo(pos)))
 
 def FacingDirectlyToward(pos):
 	"""The 'facing directly toward <vector>' specifier.
 
-	Specifies yaw and pitch angles of 'heading', depending on 'position'.
+	Specifies yaw and pitch angles of 'heading', depending on 'position' and 'roll'.
 	"""
 	return NotImplemented
 
 def FacingAwayFrom(pos):
 	""" The 'facing away from <vector>' specifier.
 
-	Specifies yaw and pitch angles 'heading', depending on 'position'.
+	Specifies yaw andgle of 'heading', depending on 'position', 'roll',
+	and 'pitch'.
 	"""
 	pos = toVector(pos, 'specifier "facing away from X" with X not a vector')
-	return Specifier('heading', DelayedArgument({'position'},
+	return Specifier('heading', DelayedArgument({'position', 'specifier'},
 												lambda self, spec: pos.angleTo(self.position)))
 
 def FacingDirectlyAwayFrom(pos):
 	"""The 'facing directly away from <vector>' specifier. 
 
-	Specifies yaw and pitch angles of 'heading', depending on 'position'.
+	Specifies yaw and pitch angles of 'heading', depending on 'position' and 'roll'.
 	"""
 	return NotImplemented
 
 def ApparentlyFacing(heading, fromPt=None):
 	"""The 'apparently facing <heading> [from <vector>]' specifier.
 
-	Specifies 'heading', depending on 'position'.
+	Specifies 'pitch', 'roll', and 'yaw' of 'orientation', 'heading', depending 
+	on 'position'.
 
 	If the 'from <vector>' is omitted, the position of ego is used.
 	"""

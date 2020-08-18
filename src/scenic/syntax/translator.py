@@ -228,9 +228,8 @@ api = set(veneer.__all__)
 
 ## Functions used internally
 
-rangeConstructor = 'Range'
 createDefault = 'PropertyDefault'
-internalFunctions = { rangeConstructor, createDefault }
+internalFunctions = { createDefault }
 
 # sanity check: these functions actually exist
 for imp in internalFunctions:
@@ -248,7 +247,8 @@ for imp in functionStatements:
 
 ## Built-in functions
 
-builtinFunctions = { 'resample', 'verbosePrint' }
+rangeConstructor = 'Range'
+builtinFunctions = { 'resample', 'verbosePrint', rangeConstructor }
 
 # sanity check: implementations of built-in functions actually exist
 for imp in builtinFunctions:
@@ -998,15 +998,6 @@ class ASTSurgeon(NodeTransformer):
 		else:	# all other operators have the Python semantics
 			newNode = BinOp(self.visit(left), op, self.visit(right))
 		return copy_location(newNode, node)
-
-	def visit_Tuple(self, node):
-		"""Convert pairs into uniform distributions."""
-		if isinstance(node.ctx, Store):
-			return self.generic_visit(node)
-		if len(node.elts) != 2:
-			raise self.parseError(node, 'interval must have exactly two endpoints')
-		newElts = [self.visit(elt) for elt in node.elts]
-		return copy_location(Call(Name(rangeConstructor, Load()), newElts, []), node)
 
 	def visit_Call(self, node):
 		"""Wrap require statements with lambdas and unpack any argument packages."""

@@ -45,7 +45,7 @@ class Workspace(Region):
 
 	def scenicToSchematicCoords(self, coords):
 		"""Convert Scenic coordinates to those used for schematic rendering."""
-		return coords
+		return coords[:2]
 
 	def uniformPointInner(self):
 		return self.region.uniformPointInner()

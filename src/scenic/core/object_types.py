@@ -7,7 +7,7 @@ import random
 
 from scenic.core.distributions import Samplable, needsSampling
 from scenic.core.specifiers import Specifier, PropertyDefault
-from scenic.core.vectors import Vector
+from scenic.core.vectors import Vector, Orientation
 from scenic.core.geometry import RotatedRectangle, averageVectors, hypot, min, pointIsInCone
 from scenic.core.regions import CircularRegion, SectorRegion
 from scenic.core.type_support import toVector, toScalar
@@ -310,9 +310,10 @@ class OrientedPoint(Point):
 	# TODO: @Matthew Heading is derived from Orientation 
 	heading: 0
 	viewAngle: math.tau
-	pitch: 0 # Y-axis
-	roll: 0 # X-axis
-	yaw: 0 # Z-axis 
+	pitch: 0
+	roll: 0
+	yaw: 0
+	orientation: Orientation(pitch, roll, yaw)
 
 	mutator: PropertyDefault({'headingStdDev'}, {'additive'},
 		lambda self, specifier: HeadingMutator(self.headingStdDev))

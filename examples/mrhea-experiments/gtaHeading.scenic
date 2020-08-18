@@ -3,6 +3,6 @@ setLocalMap(__file__, '../gta/map.npz')
 
 from scenic.simulators.gta.model import *
 
-spot = OrientedPoint at (1,2,3)
+ego = Car
 
-ego = Car at spot
+c2 = Car facing [45 deg]
