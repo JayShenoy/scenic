@@ -1,17 +1,21 @@
 """Scenic script for testing purposes only."""
 
-from scenic.simulators.domains.driving.network import loadLocalNetwork
-loadLocalNetwork(__file__, '../OpenDrive/Town01.xodr')
+import matplotlib.pyplot as plt
+param map = localPath('../OpenDrive/Town10HD.xodr')
+param carla_map = 'Town10HD'
+model scenic.domains.driving.model
 
-from scenic.simulators.carla.model import *
-import scenic.simulators.carla.behaviors as behaviors
+roads = network.roads
+select_road = Uniform(*roads)
+select_lane = Uniform(*select_road.lanes)
 
-simulator = CarlaSimulator('Town01')
+ego = Car on select_lane.centerline
 
+spot = OrientedPoint on visible curb
+badAngle = Uniform(-1,1) * (10,20) deg
+other = Car left of (spot offset by 1.5 @ 0),
+	facing badAngle relative to ego.heading,
+	with regionContainedIn None
 
-ego = Car with behavior behaviors.ConstantThrottleBehavior(0.5)
-
-otherCar = Car ahead of ego by 10,
-    with behavior behaviors.ConstantThrottleBehavior(0.7)
-
-obstacle = Pedestrian with behavior behaviors.WalkForwardBehavior
+require ((angle to other) - ego.heading) < 10 deg
+require (distance to other) < 20

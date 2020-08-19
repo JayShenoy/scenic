@@ -25,8 +25,8 @@ def distanceToAnyObjs(vehicle, thresholdDistance):
 	for obj in objects:
 		if not (vehicle can see obj):
 			continue
-		# if not (network.laneAt(vehicle) == network.laneAt(obj) or network.intersectionAt(vehicle)==network.intersectionAt(obj)):
-		# 	continue
+		if not (network.laneAt(vehicle) == network.laneAt(obj) or network.intersectionAt(vehicle)==network.intersectionAt(obj)):
+		 	continue
 		if distance(vehicle.position, obj.position) < 0.1:
 			# this means obj==vehicle
 			pass
@@ -77,8 +77,9 @@ behavior FollowLaneBehavior(target_speed = 10, laneToFollow=None):
 
 	# instantiate longitudinal and latitudinal pid controllers
 	if is_vehicle:
+		print("vehicle PID controller instantiated")
 		_lon_controller = controllers.PIDLongitudinalController(K_P=0.5, K_D=0.1, K_I=0.7, dt=dt)
-		_lat_controller = controllers.PIDLateralController(K_P=0.3, K_D=0.2, K_I=0, dt=dt)
+		_lat_controller = controllers.PIDLateralController(K_P=0.2, K_D=0.1, K_I=0, dt=dt)
 
 	else:
 		_lon_controller = controllers.PIDLongitudinalController(K_P=0.25, K_D=0.025, K_I=0.0, dt=dt)
@@ -145,7 +146,7 @@ behavior FollowTrajectoryBehavior(target_speed = 10, trajectory = None):
 	# instantiate longitudinal and latitudinal pid controllers
 	if is_vehicle:
 		_lon_controller = controllers.PIDLongitudinalController(K_P=0.5, K_D=0.1, K_I=0.7, dt=dt)
-		_lat_controller = controllers.PIDLateralController(K_P=0.3, K_D=0.2, K_I=0, dt=dt)
+		_lat_controller = controllers.PIDLateralController(K_P=0.2, K_D=0.1, K_I=0, dt=dt)
 
 	else:
 		_lon_controller = controllers.PIDLongitudinalController(K_P=0.25, K_D=0.025, K_I=0.0, dt=dt)

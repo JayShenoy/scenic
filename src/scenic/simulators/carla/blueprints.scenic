@@ -21,7 +21,8 @@ carModels = {# for speed = 10, #Longitudinal: K_P=0.5, K_D=0.1, K_I=0.7 /  # Lat
       'vehicle.seat.leon',
       'vehicle.tesla.model3', ## not for lanechange
       'vehicle.toyota.prius',
-      'vehicle.volkswagen.t2'
+      'vehicle.volkswagen.t2',
+      'vehicle.tesla.cybertruck'
 }
 
 bicycleModels = {# Speed 10 : Longitudinal : K_P=0.25, K_D=0.025, K_I=0.0 
