@@ -59,7 +59,6 @@ behavior FollowLaneBehavior(target_speed = 10, laneToFollow=None):
 	if laneToFollow is None:
 		current_lane = network.laneAt(self)
 	else:
-		print("lanetoFollow")
 		current_lane = laneToFollow
 
 	current_centerline = current_lane.centerline
@@ -72,12 +71,16 @@ behavior FollowLaneBehavior(target_speed = 10, laneToFollow=None):
 	nearby_intersection = current_lane.maneuvers[0].intersection
 
 	# check whether self agent is vehicle:
-	is_vehicle = self.blueprint in carModels
-	dt = simulation().timestep
+	if self.blueprint:
+		is_vehicle = self.blueprint in carModels
+	else:
+		# assume it is a car
+		is_vehicle = True
 
+	dt = simulation().timestep
+	
 	# instantiate longitudinal and latitudinal pid controllers
 	if is_vehicle:
-		print("vehicle PID controller instantiated")
 		_lon_controller = controllers.PIDLongitudinalController(K_P=0.5, K_D=0.1, K_I=0.7, dt=dt)
 		_lat_controller = controllers.PIDLateralController(K_P=0.2, K_D=0.1, K_I=0, dt=dt)
 
@@ -140,7 +143,12 @@ behavior FollowTrajectoryBehavior(target_speed = 10, trajectory = None):
 	trajectory_line = concatenateCenterlines(trajectory)
 
 	# check whether self agent is vehicle:
-	is_vehicle = self.blueprint in carModels
+	if self.blueprint:
+		is_vehicle = self.blueprint in carModels
+	else:
+		# assume it is a car
+		is_vehicle = True
+
 	dt = simulation().timestep
 
 	# instantiate longitudinal and latitudinal pid controllers
