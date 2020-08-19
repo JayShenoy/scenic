@@ -213,11 +213,11 @@ class CarModel:
 		models: dict mapping model names to the corresponding `CarModel`
 	"""
 
-	def __init__(self, name, width, height, viewAngle=math.radians(90)):
+	def __init__(self, name, width, length, viewAngle=math.radians(90)):
 		super(CarModel, self).__init__()
 		self.name = name
 		self.width = width
-		self.height = height
+		self.length = length
 		self.viewAngle = viewAngle
 
 	@classmethod

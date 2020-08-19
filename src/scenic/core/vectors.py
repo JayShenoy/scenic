@@ -139,10 +139,9 @@ def vectorDistributionMethod(method):
 	return helper
 
 class Orientation():
-	"""A quaternion representation of an orientation whose rotation axis and angle can be distributions."""
+	"""A quaternion representation of an orientation."""
 	def __init__(self, x, y=0, z=0):
-		self.r = Rotation.from_euler('ZYX', [z, y, x], degrees=False)
-		self.q = self.r.as_quat()
+		self.q = Rotation.from_euler('ZYX', [z, y, x], degrees=False).as_quat()
 
 	# Convention: X axis is longitudinal pointing ahead, Z axis is vertical pointing downward, and Y axis is 
 	# lateral pointing to accomodate right-hand rule. 
@@ -173,7 +172,7 @@ class Orientation():
 
 	def get_euler(self):
 		r = Rotation.from_quat(self.q)
-		return r.as_euler('XYZ', degrees=False)
+		return r.as_euler('ZYX', degrees=False)
 
 	def toHeading(self):
 		# TODO: @Matthew Inherit toHeading() or implement its own?

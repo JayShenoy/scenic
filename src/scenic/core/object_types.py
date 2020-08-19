@@ -4,6 +4,7 @@ import inspect
 import collections
 import math
 import random
+import pymesh
 
 from scenic.core.distributions import Samplable, needsSampling
 from scenic.core.specifiers import Specifier, PropertyDefault
@@ -108,6 +109,7 @@ class Constructible(Samplable):
 			for dep in spec.requiredProperties:
 				child = properties.get(dep)
 				if child is None:
+					breakpoint()
 					raise RuntimeParseError(f'property {dep} required by '
 											f'specifier {spec} is not specified')
 				else:
@@ -241,11 +243,11 @@ class Point(Constructible):
 		visibleDistance (float): Distance for ``can see`` operator. Default value 50.
 		width (float): Default value zero (only provided for compatibility with
 		  operators that expect an `Object`).
-		height (float): Default value zero.
+		length (float): Default value zero.
 	"""
 	position: Vector(0, 0)
 	width: 0
-	height: 0
+	length: 0
 	visibleDistance: 50
 
 	mutationEnabled: False
@@ -310,10 +312,9 @@ class OrientedPoint(Point):
 	# TODO: @Matthew Heading is derived from Orientation 
 	heading: 0
 	viewAngle: math.tau
-	# pitch: 0
-	# roll: 0
-	# yaw: 0
-	# orientation: Orientation(roll, pitch, yaw)
+	pitch: 0
+	roll: 0
+	yaw: 0
 
 	mutator: PropertyDefault({'headingStdDev'}, {'additive'},
 		lambda self, specifier: HeadingMutator(self.headingStdDev))
@@ -322,6 +323,7 @@ class OrientedPoint(Point):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.heading = toScalar(self.heading, f'"heading" of {self} not a scalar')
+		self.orientation = Orientation(self.roll, self.pitch, self.yaw) # TODO: @Matthew Where to place orientation? 
 
 	@cached_property
 	def visibleRegion(self):
@@ -348,6 +350,8 @@ class Object(OrientedPoint, RotatedRectangle):
 		  Default value 1.
 		height (float): Height of the object, i.e. extent along its Y axis.
 		  Default value 1.
+		length (float): Length of the object, i.e. extent along its Z axis.
+		  Default value 1. 
 		allowCollisions (bool): Whether the object is allowed to intersect
 		  other objects. Default value ``False``.
 		requireVisible (bool): Whether the object is required to be visible
@@ -360,6 +364,7 @@ class Object(OrientedPoint, RotatedRectangle):
 	"""
 	width: 1
 	height: 1
+	length: 1 # TODO: @Matthew `height` should now be `length`, and vice versa
 	allowCollisions: False
 	requireVisible: True
 	regionContainedIn: None
@@ -370,8 +375,9 @@ class Object(OrientedPoint, RotatedRectangle):
 		super().__init__(*args, **kwargs)
 		self.hw = hw = self.width / 2
 		self.hh = hh = self.height / 2
-		self.radius = hypot(hw, hh)	# circumcircle; for collision detection
-		self.inradius = min(hw, hh)	# incircle; for collision detection
+		self.hl = hl = self.length / 2
+		self.radius = hypot(hw, hl)	# circumcircle; for collision detection
+		self.inradius = min(hw, hl)	# incircle; for collision detection
 
 		self._relations = []
 
@@ -389,27 +395,27 @@ class Object(OrientedPoint, RotatedRectangle):
 
 	@cached_property
 	def front(self):
-		return self.relativize(Vector(0, self.hh))
+		return self.relativize(Vector(0, self.hl))
 
 	@cached_property
 	def back(self):
-		return self.relativize(Vector(0, -self.hh))
+		return self.relativize(Vector(0, -self.hl))
 
 	@cached_property
 	def frontLeft(self):
-		return self.relativize(Vector(-self.hw, self.hh))
+		return self.relativize(Vector(-self.hw, self.hl))
 
 	@cached_property
 	def frontRight(self):
-		return self.relativize(Vector(self.hw, self.hh))
+		return self.relativize(Vector(self.hw, self.hl))
 
 	@cached_property
 	def backLeft(self):
-		return self.relativize(Vector(-self.hw, -self.hh))
+		return self.relativize(Vector(-self.hw, -self.hl))
 
 	@cached_property
 	def backRight(self):
-		return self.relativize(Vector(self.hw, -self.hh))
+		return self.relativize(Vector(self.hw, -self.hl))
 
 	@cached_property
 	def visibleRegion(self):
@@ -418,12 +424,12 @@ class Object(OrientedPoint, RotatedRectangle):
 
 	@cached_property
 	def corners(self):
-		hw, hh = self.hw, self.hh
+		hw, hl = self.hw, self.hl
 		return (
-			self.relativePosition(Vector(hw, hh)),
-			self.relativePosition(Vector(-hw, hh)),
-			self.relativePosition(Vector(-hw, -hh)),
-			self.relativePosition(Vector(hw, -hh))
+			self.relativePosition(Vector(hw, hl)),
+			self.relativePosition(Vector(-hw, hl)),
+			self.relativePosition(Vector(-hw, -hl)),
+			self.relativePosition(Vector(hw, -hl))
 		)
 
 	def show(self, workspace, plt, highlight=False):
@@ -434,7 +440,7 @@ class Object(OrientedPoint, RotatedRectangle):
 
 		if highlight:
 			# Circle around object
-			rad = 1.5 * max(self.width, self.height)
+			rad = 1.5 * max(self.width, self.length)
 			c = plt.Circle(spos, rad, color='g', fill=False)
 			plt.gca().add_artist(c)
 			# View cone

@@ -405,11 +405,11 @@ def On(region):
 	"""The 'on <X>' specifier.
 
 	Specifies 'position', with no dependencies. Optionally specifies 'heading'
-	if the given Region has a preferred orientation. 
+	if the given Region/Object has a preferred orientation. 
 	
 	May be composed with a single specifier, with the exception of another 
 	ModifyingSpecifier and 'at <vector>' specifier. Specifies 'position' and 
-	the roll and pitch and 'orientation'.
+	the pitch an roll and 'orientation'. Depends on 'yaw'. 
 
 	Allowed forms:
 		on <region>
@@ -499,7 +499,7 @@ def Facing(heading):
 		facing <vector> -- depends on 'roll';
 	"""
 	if isinstance(heading, VectorField):
-		return Specifier('heading', DelayedArgument({'position', 'specifier'},
+		return Specifier('heading', DelayedArgument({'position'},
 		                                            lambda self, spec: heading[self.position]))
 	else:
 		heading = toHeading(heading, 'specifier "facing X" with X not a heading or vector field')
@@ -512,7 +512,7 @@ def FacingToward(pos):
 	and 'pitch'.
 	"""
 	pos = toVector(pos, 'specifier "facing toward X" with X not a vector')
-	return Specifier('heading', DelayedArgument({'position', 'specifer'}, # Depend on 'roll' 
+	return Specifier('heading', DelayedArgument({'position'}, # Depend on 'roll' 
 	                                            lambda self, spec: self.position.angleTo(pos)))
 
 def FacingDirectlyToward(pos):
@@ -525,11 +525,11 @@ def FacingDirectlyToward(pos):
 def FacingAwayFrom(pos):
 	""" The 'facing away from <vector>' specifier.
 
-	Specifies yaw andgle of 'heading', depending on 'position', 'roll',
+	Specifies yaw angle of 'heading', depending on 'position', 'roll',
 	and 'pitch'.
 	"""
 	pos = toVector(pos, 'specifier "facing away from X" with X not a vector')
-	return Specifier('heading', DelayedArgument({'position', 'specifier'},
+	return Specifier('heading', DelayedArgument({'position'},
 												lambda self, spec: pos.angleTo(self.position)))
 
 def FacingDirectlyAwayFrom(pos):
@@ -594,8 +594,8 @@ def Ahead(pos, dist=0):
 
 	If the 'by <scalar/vector>' is omitted, zero is used.
 	"""
-	return leftSpecHelper('ahead of', pos, dist, 'height', lambda dist: (0, dist),
-	                      lambda self, dx, dy: Vector(dx, self.height / 2 + dy))
+	return leftSpecHelper('ahead of', pos, dist, 'length', lambda dist: (0, dist),
+	                      lambda self, dx, dy: Vector(dx, self.length / 2 + dy))
 
 def Behind(pos, dist=0):
 	"""The 'behind X [by Y]' polymorphic specifier.
@@ -608,8 +608,8 @@ def Behind(pos, dist=0):
 
 	If the 'by <scalar/vector>' is omitted, zero is used.
 	"""
-	return leftSpecHelper('behind', pos, dist, 'height', lambda dist: (0, dist),
-	                      lambda self, dx, dy: Vector(dx, -self.height / 2 - dy))
+	return leftSpecHelper('behind', pos, dist, 'length', lambda dist: (0, dist),
+	                      lambda self, dx, dy: Vector(dx, -self.length / 2 - dy))
 
 def Above(pos, dist=0):
 	"""The 'above X [by Y]' polymorphic specifier.

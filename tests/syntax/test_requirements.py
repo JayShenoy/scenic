@@ -10,7 +10,7 @@ from tests.utils import sampleEgo
 
 def test_requirement():
     scenario = compileScenic(
-        'ego = Object at (-10, 10) @ 0\n'
+        'ego = Object at Range(-10, 10) @ 0\n'
         'require ego.position.x >= 0'
     )
     xs = [sampleEgo(scenario, maxIterations=60).position.x for i in range(60)]
@@ -18,7 +18,7 @@ def test_requirement():
 
 def test_soft_requirement():
     scenario = compileScenic(
-        'ego = Object at (-10, 10) @ 0\n'
+        'ego = Object at Range(-10, 10) @ 0\n'
         'require[0.9] ego.position.x >= 0'
     )
     xs = [sampleEgo(scenario, maxIterations=60).position.x for i in range(350)]

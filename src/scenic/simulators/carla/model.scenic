@@ -36,7 +36,7 @@ class Vehicle:
     roadDeviation: 0
     viewAngle: 90 deg
     width: 2
-    height: 5
+    length: 5
     color: CarColor.defaultColor()
     agent: 'BrakeAgent'
 
@@ -45,17 +45,17 @@ class Car(Vehicle):
 
 class Bicycle(Vehicle):
     width: 1
-    height: 2
+    length: 2
     blueprint: Uniform(*bicycleModels)
 
 class Motorcycle(Vehicle):
     width: 1
-    height:2
+    length:2
     blueprint: Uniform(*motorcycleModels)
 
 class Truck(Vehicle):
     width: 3
-    height: 7
+    length: 7
     blueprint: Uniform(*truckModels)
 
 class Pedestrian:
@@ -63,14 +63,14 @@ class Pedestrian:
     position: Point on sidewalk
     heading: Range(0, 360) deg
     width: 0.5
-    height: 0.5
+    length: 0.5
 
 class Prop:
     regionContainedIn: road
     position: Point on road
     heading: Range(0, 360) deg
     width: 0.5
-    height: 0.5
+    length: 0.5
 
 class Trash(Prop):
     blueprint: Uniform(*trashModels)
