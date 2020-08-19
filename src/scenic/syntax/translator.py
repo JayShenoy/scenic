@@ -275,6 +275,8 @@ pointSpecifiers = {
 	('right', 'of'): 'RightSpec',
 	('ahead', 'of'): 'Ahead',
 	('behind',): 'Behind',
+	('above',): 'Above',
+	('below',): 'Below',
 	('following',): 'Following',
 }
 orientedPointSpecifiers = {

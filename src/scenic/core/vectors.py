@@ -219,10 +219,14 @@ class Vector(Samplable, collections.abc.Sequence):
 	@vectorOperator
 	def rotatedBy(self, angle):
 		"""Return a vector equal to this one rotated counterclockwise by the given angle."""
-		# TODO: Implement Orientation class to rotate a vector with quaternion 
 		x, y, z = self.x, self.y, self.z
 		c, s = cos(angle), sin(angle)
 		return Vector((c * x) - (s * y), (s * x) + (c * y))
+		'''
+		rotatedBy using quaternion multiplication:
+
+		x, y, z = self.x, self,y, self.z
+		'''
 
 	@vectorOperator
 	def offsetRotated(self, heading, offset):

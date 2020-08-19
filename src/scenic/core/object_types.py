@@ -364,7 +364,7 @@ class Object(OrientedPoint, RotatedRectangle):
 	"""
 	width: 1
 	height: 1
-	length: 1 # TODO: @Matthew `height` should now be `length`, and vice versa
+	length: 1 
 	allowCollisions: False
 	requireVisible: True
 	regionContainedIn: None

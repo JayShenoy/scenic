@@ -565,8 +565,8 @@ def LeftSpec(pos, dist=0, specs=None):
 
 	If the 'by <scalar/vector>' is omitted, zero is used.
 	"""
-	return leftSpecHelper('left of', pos, dist, 'width', lambda dist: (dist, 0),
-	                      lambda self, dx, dy: Vector(-self.width / 2 - dx, dy))
+	return leftSpecHelper('left of', pos, dist, 'width', lambda dist: (dist, 0, 0),
+	                      lambda self, dx, dy, dz: Vector(-self.width / 2 - dx, dy, dz))
 
 def RightSpec(pos, dist=0):
 	"""The 'right of X [by Y]' polymorphic specifier.
@@ -579,8 +579,8 @@ def RightSpec(pos, dist=0):
 
 	If the 'by <scalar/vector>' is omitted, zero is used.
 	"""
-	return leftSpecHelper('right of', pos, dist, 'width', lambda dist: (dist, 0),
-	                      lambda self, dx, dy: Vector(self.width / 2 + dx, dy))
+	return leftSpecHelper('right of', pos, dist, 'width', lambda dist: (dist, 0, 0),
+	                      lambda self, dx, dy, dz: Vector(self.width / 2 + dx, dy, dz))
 
 def Ahead(pos, dist=0):
 	"""The 'ahead of X [by Y]' polymorphic specifier.
@@ -594,8 +594,8 @@ def Ahead(pos, dist=0):
 
 	If the 'by <scalar/vector>' is omitted, zero is used.
 	"""
-	return leftSpecHelper('ahead of', pos, dist, 'length', lambda dist: (0, dist),
-	                      lambda self, dx, dy: Vector(dx, self.length / 2 + dy))
+	return leftSpecHelper('ahead of', pos, dist, 'length', lambda dist: (0, dist, 0),
+	                      lambda self, dx, dy, dz: Vector(dx, self.length / 2 + dy, dz))
 
 def Behind(pos, dist=0):
 	"""The 'behind X [by Y]' polymorphic specifier.
@@ -608,8 +608,8 @@ def Behind(pos, dist=0):
 
 	If the 'by <scalar/vector>' is omitted, zero is used.
 	"""
-	return leftSpecHelper('behind', pos, dist, 'length', lambda dist: (0, dist),
-	                      lambda self, dx, dy: Vector(dx, -self.length / 2 - dy))
+	return leftSpecHelper('behind', pos, dist, 'length', lambda dist: (0, dist, 0),
+	                      lambda self, dx, dy, dz: Vector(dx, -self.length / 2 - dy, dz))
 
 def Above(pos, dist=0):
 	"""The 'above X [by Y]' polymorphic specifier.
@@ -622,7 +622,8 @@ def Above(pos, dist=0):
 
 	If the 'by <scalar/vector>' is omitted, zero is used.
 	"""
-	return NotImplemented
+	return leftSpecHelper('above', pos, dist, 'height', lambda dist: (0, 0, dist),
+						  lambda self, dx, dy, dz: Vector(dx, dy, -self.height / 2 - dz))
 
 def Below(pos, dist=0):
 	"""The 'below X [by Y]' polymorphic specifier.
@@ -635,24 +636,25 @@ def Below(pos, dist=0):
 
 	If the 'by <scalar/vector>' is omitted, zero is used.
 	"""
-	return NotImplemented
+	return leftSpecHelper('above', pos, dist, 'height', lambda dist: (0, 0, dist),
+						  lambda self, dx, dy, dz: Vector(dx, dy, self.height / 2 - dz))
 
 def leftSpecHelper(syntax, pos, dist, axis, toComponents, makeOffset):
 	extras = set()
 	dType = underlyingType(dist)
 	if dType is float or dType is int:
-		dx, dy = toComponents(dist)
+		dx, dy, dz = toComponents(dist)
 	elif dType is Vector:
-		dx, dy = dist
+		dx, dy, dz = dist
 	else:
 		raise RuntimeParseError(f'"{syntax} X by D" with D not a number or vector')
 	if isinstance(pos, OrientedPoint):		# TODO too strict?
-		val = lambda self, spec: pos.relativize(makeOffset(self, dx, dy))
+		val = lambda self, spec: pos.relativize(makeOffset(self, dx, dy, dz))
 		new = DelayedArgument({axis}, val)
 		extras.add('heading')
 	else:
 		pos = toVector(pos, f'specifier "{syntax} X" with X not a vector')
-		val = lambda self, spec: pos.offsetRotated(self.heading, makeOffset(self, dx, dy))
+		val = lambda self, spec: pos.offsetRotated(self.heading, makeOffset(self, dx, dy, dz))
 		new = DelayedArgument({axis, 'heading'}, val)
 	return Specifier('position', new, optionals=extras)
 
