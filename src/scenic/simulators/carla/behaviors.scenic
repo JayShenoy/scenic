@@ -9,7 +9,7 @@ from shapely.geometry import LineString
 import math
 from scenic.domains.driving.behaviors import *	# use common driving behaviors
 from scenic.simulators.carla.blueprints import *
-from scenic.simulators.carla.model import *
+# from scenic.simulators.carla.model import *
 
 def concatenateCenterlines(centerlines=[]):
 	return PolylineRegion.unionAll(centerlines)
