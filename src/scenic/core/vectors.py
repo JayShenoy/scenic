@@ -344,3 +344,6 @@ class PolygonalVectorField(VectorField):
 		if self.defaultHeading is not None:
 			return self.defaultHeading
 		raise RuntimeError(f'evaluated PolygonalVectorField at undefined point {pos}')
+
+class PolyhedronVectorField(VectorField):
+	pass

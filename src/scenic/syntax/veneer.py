@@ -14,6 +14,9 @@ __all__ = (
 	'Visible',
 	'Front', 'Back', 'Left', 'Right',
 	'FrontLeft', 'FrontRight', 'BackLeft', 'BackRight',
+	'Top', 'Bottom', 'TopFrontLeft', 'TopFrontRight', 'TopBackLeft',
+	'TopBackRight', 'BottomFrontLeft', 'BottomFrontRight', 'BottomBackLeft',
+	'BottomBackRight',
 	# Infix operators
 	'FieldAt', 'RelativeTo', 'OffsetAlong', 'RelativePosition',
 	'RelativeHeading', 'ApparentHeading',
@@ -213,7 +216,11 @@ def Visible(region):
 ops = (
 	'front', 'back', 'left', 'right',
 	'front left', 'front right',
-	'back left', 'back right'
+	'back left', 'back right', 'top',
+	'bottom', 'top front left', 'top front right',
+	'top back left', 'top back right',
+	'bottom front left', 'bottom front right',
+	'bottom back left', 'bottom back right'
 )
 template = '''\
 def {function}(X):
@@ -258,7 +265,7 @@ def RelativeTo(X, Y):
 			xp = X[pos] if xf else toType(X, fieldType, error)
 			yp = Y[pos] if yf else toType(Y, fieldType, error)
 			return xp + yp
-		return DelayedArgument({'position'}, helper) # TODO: @Matthew Is it a modifying specifier? -> Needs specifier info 
+		return DelayedArgument({'position'}, helper) 
 	else:
 		if isinstance(X, OrientedPoint):	# TODO too strict?
 			if isinstance(Y, OrientedPoint):

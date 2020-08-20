@@ -5,4 +5,6 @@ from scenic.simulators.gta.model import *
 
 spot = OrientedPoint on curb 
 
-ego = Car left of spot
+ego = Car left of spot, with roll 20 deg
+
+spot = OrientedPoint at top front left of ego 

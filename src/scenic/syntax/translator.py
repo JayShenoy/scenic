@@ -329,10 +329,20 @@ prefixOperators = {
 	('right',): 'Right',
 	('above',): 'Above',
 	('below',): 'Below',
+	('top',): 'Top',
+	('bottom',): 'Bottom',
+	('top', 'front', 'left',): 'TopFrontLeft',
+	('top', 'front', 'right'): 'TopFrontRight',
+	('top', 'back', 'left'): 'TopBackLeft',
+	('top', 'back', 'right'): 'TopBackRight',
+	('bottom', 'front', 'left'): 'BottomFrontLeft',
+	('bottom', 'front', 'right'): 'BottomFrontRight',
+	('bottom', 'back', 'left'): 'BottomBackLeft',
+	('bottom', 'back', 'right'): 'BottomBackRight',
 	('follow',): 'Follow',
 	('visible',): 'Visible'
 }
-assert all(1 <= len(op) <= 2 for op in prefixOperators)
+assert all(1 <= len(op) <= 3 for op in prefixOperators)
 prefixIncipits = { op[0] for op in prefixOperators }
 assert not any(op in functionStatements for op in prefixIncipits)
 

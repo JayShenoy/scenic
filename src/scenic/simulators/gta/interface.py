@@ -171,7 +171,6 @@ class Map:
 	@distributionMethod
 	def roadHeadingAt(self, point):
 		# find closest edge
-		# TODO: @pytest Updated to include z component. Fix this? 
 		point2d = (point[0], point[1])
 		distance, location = self.edgeTree.query(point2d)
 		closest = tuple(self.edgeTree.data[location])

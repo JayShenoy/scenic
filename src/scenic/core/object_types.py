@@ -311,7 +311,7 @@ class OrientedPoint(Point):
 	# TODO: @Matthew Do OrientedPoints need Orientation instead of just a scalar heading? 
 	# TODO: @Matthew Heading is derived from Orientation 
 	heading: 0
-	viewAngle: math.tau
+	viewAngle: math.tau # TODO: @Matthew Implement 2-tuple view angle for 3D views 
 	pitch: 0
 	roll: 0
 	yaw: 0
@@ -416,6 +416,46 @@ class Object(OrientedPoint, RotatedRectangle):
 	@cached_property
 	def backRight(self):
 		return self.relativize(Vector(self.hw, -self.hl))
+
+	@cached_property
+	def top(self):
+		return self.relativize(Vector(0, 0, self.hh))
+
+	@cached_property
+	def bottom(self):
+		return self.relativize(Vector(0, 0, -self.hh))
+
+	@cached_property
+	def topFrontLeft(self):
+		return self.relativize(Vector(-self.hw, self.hl, self.hh))
+
+	@cached_property
+	def topFrontRight(self):
+		return self.relativize(Vector(self.hw, self.hl, self.hh))
+
+	@cached_property
+	def topBackLeft(self):
+		return self.relativize(Vector(-self.hw, -self.hl, self.hh))
+
+	@cached_property
+	def topBackRight(self):
+		return self.relativize(Vector(self.hw, -self.hl, self.hh))
+
+	@cached_property
+	def bottomFrontLeft(self):
+		return self.relativize(Vector(-self.hw, self.hl, -self.hh))
+
+	@cached_property
+	def bottomFrontRight(self):
+		return self.relativize(Vector(self.hw, self.hl, -self.hh))
+
+	@cached_property
+	def bottomBackLeft(self):
+		return self.relativize(Vector(-self.hw, -self.hl, -self.hh))
+
+	@cached_property
+	def bottomBackRight(self):
+		return self.relativize(Vector(self.hw, -self.hl, -self.hh))
 
 	@cached_property
 	def visibleRegion(self):

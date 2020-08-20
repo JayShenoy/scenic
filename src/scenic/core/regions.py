@@ -561,11 +561,29 @@ class PolyhedronRegion(Region):
 	def __init__(self, name=None, polyhedron=None, orientation=None):
 		super().__init__('Polyhedron', orientation=orientation)
 
-	def intersect(self, other):
-		return NotImplemented
+	def uniformPointInner(self):
+		pass
 
+	def intersect(self, other):
+		pass
+	
 	def union(self, other):
-		return NotImplemented
+		pass
+
+	def containsPoint(self, point):
+		pass
+
+	def containsObject(self, obj):
+		pass
+
+	def __str__(self):
+		return '<PolygonalRegion>'
+
+	def __str__(self):
+		return '<PolyhedronRegion>'
+
+	def __eq__(self, other):
+		pass
 
 class PointSetRegion(Region):
 	"""Region consisting of a set of discrete points.
