@@ -6,8 +6,10 @@ import math
 import random
 import pymesh
 
+from abc import ABC, abstractmethod
+
 from scenic.core.distributions import Samplable, needsSampling
-from scenic.core.specifiers import Specifier, PropertyDefault
+from scenic.core.specifiers import Specifier, PropertyDefault, ModifyingSpecifier
 from scenic.core.vectors import Vector, Orientation
 from scenic.core.geometry import RotatedRectangle, averageVectors, hypot, min, pointIsInCone
 from scenic.core.regions import CircularRegion, SectorRegion
@@ -56,37 +58,33 @@ class Constructible(Samplable):
 				object.__setattr__(self, prop, value)
 			super().__init__(kwargs.values())
 			self.properties = set(kwargs.keys())
-			return
-
+			 # TODO: @Matthew Build up dict and assert at end of init
+			return               # that it's len is == properties or something 
 		# Validate specifiers
 		name = type(self).__name__
 		specifiers = list(args)
 		for prop, val in kwargs.items():	# kwargs supported for internal use
-			specifiers.append(Specifier(prop, val))
+			specifiers.append(Specifier({prop: 1}, val))
 		properties = dict()
+		modifying = dict()
+		priorities = dict()
 		optionals = collections.defaultdict(list)
 		defs = self.__class__.defaults
 		for spec in specifiers:
 			assert isinstance(spec, Specifier), (name, spec)
-			prop = spec.property
-			if prop in properties: # TODO: @Matthew Relax this condition. 
-				raise RuntimeParseError(f'property "{prop}" of {name} specified twice')
-			properties[prop] = spec
-			for opt in spec.optionals:
-				if opt in defs:		# do not apply optionals for properties this object lacks
-					optionals[opt].append(spec)
-
-		# Decide which optionals to use
-		optionalsForSpec = collections.defaultdict(set)
-		for opt, specs in optionals.items():
-			if opt in properties:
-				continue		# optionals do not override a primary specification
-			if len(specs) > 1:
-				raise RuntimeParseError(f'property "{opt}" of {name} specified twice (optionally)')
-			assert len(specs) == 1
-			spec = specs[0]
-			properties[opt] = spec
-			optionalsForSpec[spec].add(opt)
+			props = spec.properties
+			for p in props: 
+				if p in properties: # TODO: @Matthew Relax this condition. 
+					raise RuntimeParseError(f'property "{prop}" of {name} specified twice')
+				if p in modifying:
+					raise RuntimeParseError(f'property "{prop}" of {name} modified twice')
+				priorities[p] = spec.properties[p]
+			if isinstance(spec, ModifyingSpecifier):
+				for p in props:
+					modifying[p] = spec
+			else:
+				for p in props:
+					properties[p] = spec
 
 		# Add any default specifiers needed
 		for prop in defs:
@@ -109,7 +107,6 @@ class Constructible(Samplable):
 			for dep in spec.requiredProperties:
 				child = properties.get(dep)
 				if child is None:
-					breakpoint()
 					raise RuntimeParseError(f'property {dep} required by '
 											f'specifier {spec} is not specified')
 				else:
@@ -123,7 +120,8 @@ class Constructible(Samplable):
 
 		# Evaluate and apply specifiers
 		for spec in order:
-			spec.applyTo(self, order, optionalsForSpec[spec]) # TODO: @Matthew pass order (the list of specs) into here
+			# TODO: @Matthew Use `order` to check for how modifying specifiers should be evaluated
+			spec.applyTo(self, order, priorities)
 
 		# Set up dependencies
 		deps = []
@@ -131,8 +129,11 @@ class Constructible(Samplable):
 			assert hasattr(self, prop)
 			val = getattr(self, prop)
 			deps.append(val)
+
 		super().__init__(deps)
 		self.properties = set(properties)
+		self.modifying = set(modifying)
+		self.priorities = set(priorities)
 
 		# Possibly register this object
 		self._register()
@@ -169,6 +170,24 @@ class Constructible(Samplable):
 		else:
 			allProps = '<under construction>'
 		return f'{type(self).__name__}({allProps})'
+
+## Shapes
+
+class Shape(ABC):
+	"""An abstract base class for Scenic objects.
+
+	Scenic objects have a shape property associated with them that are 
+	implemented internally as meshes that describe its geometry. This 
+	abstract class implements the procedure to perform mesh processing
+	as well as several common methods supported by meshes that an object
+	will use. 
+	"""
+	def __init__(self):
+		pass
+
+	@abstractmethod
+	def foo(self):
+		pass
 
 ## Mutators
 
@@ -245,7 +264,7 @@ class Point(Constructible):
 		  operators that expect an `Object`).
 		length (float): Default value zero.
 	"""
-	position: Vector(0, 0)
+	position: Vector(0, 0, 0) # TODO: @Matthew Extend position to 3D.
 	width: 0
 	length: 0
 	visibleDistance: 50

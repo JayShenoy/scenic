@@ -601,7 +601,7 @@ class TokenTranslator:
 	"""
 	def __init__(self, constructors=()):
 		self.functions = set(functionStatements)
-		self.constructors = dict(builtinConstructors)
+		self.constructors = dict(builtinConstructors) 
 		for constructor in constructors:
 			name = constructor.name
 			assert name not in self.constructors

@@ -386,14 +386,14 @@ def With(prop, val):
 	the given property is specified with respect to the same property of Y (i.e., value
 	is added to the value of the property of Y).
 	"""
-	return Specifier(prop, val)
+	return Specifier({prop: 1}, val)
 
 def At(pos):
 	"""The 'at <vector>' specifier.
 
 	Specifies 'position', with no dependencies."""
 	pos = toVector(pos, 'specifier "at X" with X not a vector')
-	return Specifier('position', pos)
+	return Specifier({'position': 1}, pos)
 
 def In(region):
 	"""The 'in <region>' specifier.
@@ -405,8 +405,8 @@ def In(region):
 	position and orientation. 
 	"""
 	region = toType(region, Region, 'specifier "in R" with R not a Region')
-	extras = {'heading'} if alwaysProvidesOrientation(region) else {}
-	return Specifier('position', Region.uniformPointIn(region), optionals=extras)
+	extras = {'parentOrientation'} if alwaysProvidesOrientation(region) else {}
+	return Specifier({'position': 1, 'parentOrientation': 3}, Region.uniformPointIn(region))
 
 def On(region):
 	"""The 'on <X>' specifier.
@@ -424,7 +424,7 @@ def On(region):
 	"""
 	region = toType(region, Region, 'specifier "on R" with R not a Region')
 	extras = {'heading'} if alwaysProvidesOrientation(region) else {}
-	return ModifyingSpecifier('position', Region.uniformPointIn(region), optionals=extras)
+	return ModifyingSpecifier({'position': 1, 'parentOrientation': 2}, Region.uniformPointIn(region))
 
 def alwaysProvidesOrientation(region):
 	"""Whether a Region or distribution over Regions always provides an orientation."""
@@ -456,7 +456,7 @@ def Beyond(pos, offset, fromPt=None):
 		fromPt = ego()
 	fromPt = toVector(fromPt, 'specifier "beyond X by Y from Z" with Z not a vector')
 	lineOfSight = fromPt.angleTo(pos)
-	return Specifier('position', pos.offsetRotated(lineOfSight, offset))
+	return Specifier({'position': 1, 'parentOrientation': 3}, pos.offsetRotated(lineOfSight, offset))
 
 def VisibleFrom(base):
 	"""The 'visible from <Point>' specifier.
@@ -468,7 +468,7 @@ def VisibleFrom(base):
 	"""
 	if not isinstance(base, Point):
 		raise RuntimeParseError('specifier "visible from O" with O not a Point')
-	return Specifier('position', Region.uniformPointIn(base.visibleRegion))
+	return Specifier({'position': 1}, Region.uniformPointIn(base.visibleRegion))
 
 def VisibleSpec():
 	"""The 'visible' specifier (equivalent to 'visible from ego').
@@ -484,7 +484,7 @@ def OffsetBy(offset):
 	"""
 	offset = toVector(offset, 'specifier "offset by X" with X not a vector')
 	pos = RelativeTo(offset, ego()).toVector()
-	return Specifier('position', pos)
+	return Specifier({'position': 1, 'parentOrientation': 3}, pos)
 
 def OffsetAlongSpec(direction, offset):
 	"""The 'offset along X by Y' polymorphic specifier.
@@ -495,7 +495,7 @@ def OffsetAlongSpec(direction, offset):
 		offset along <heading> by <vector>
 		offset along <field> by <vector>
 	"""
-	return Specifier('position', OffsetAlong(ego(), direction, offset))
+	return Specifier({'position': 1, 'parentOrientation': 3}, OffsetAlong(ego(), direction, offset))
 
 def Facing(heading):
 	"""The 'facing X' polymorphic specifier.
@@ -506,11 +506,13 @@ def Facing(heading):
 		facing <vector> -- depends on 'roll';
 	"""
 	if isinstance(heading, VectorField):
+		# TODO: @Matthew Fix this call (properties shouldn't be there)
 		return Specifier('heading', DelayedArgument({'position'},
-		                                            lambda self, spec: heading[self.position]))
+		                                            lambda self, spec: heading[self.position]),
+						 properties=('yaw', 'pitch'))
 	else:
 		heading = toHeading(heading, 'specifier "facing X" with X not a heading or vector field')
-		return Specifier('heading', heading)
+		return Specifier({'yaw': 1, 'pitch': 2, 'roll': 3}, heading)
 
 def FacingToward(pos):
 	"""The 'facing toward <vector>' specifier.
@@ -519,7 +521,7 @@ def FacingToward(pos):
 	and 'pitch'.
 	"""
 	pos = toVector(pos, 'specifier "facing toward X" with X not a vector')
-	return Specifier('heading', DelayedArgument({'position'}, # Depend on 'roll' 
+	return Specifier({'yaw': 1, 'pitch': 3}, DelayedArgument({'position'}, # Depend on 'roll' 
 	                                            lambda self, spec: self.position.angleTo(pos)))
 
 def FacingDirectlyToward(pos):
@@ -536,7 +538,7 @@ def FacingAwayFrom(pos):
 	and 'pitch'.
 	"""
 	pos = toVector(pos, 'specifier "facing away from X" with X not a vector')
-	return Specifier('heading', DelayedArgument({'position'},
+	return Specifier({'yaw': 1, 'pitch': 3}, DelayedArgument({'position'},
 												lambda self, spec: pos.angleTo(self.position)))
 
 def FacingDirectlyAwayFrom(pos):
@@ -559,7 +561,7 @@ def ApparentlyFacing(heading, fromPt=None):
 		fromPt = ego()
 	fromPt = toVector(fromPt, 'specifier "apparently facing X from Y" with Y not a vector')
 	value = lambda self: fromPt.angleTo(self.position) + heading
-	return Specifier('heading', DelayedArgument({'position'}, value))
+	return Specifier({'yaw': 1, 'pitch': 1}, DelayedArgument({'position'}, value))
 
 def LeftSpec(pos, dist=0, specs=None):
 	"""The 'left of X [by Y]' polymorphic specifier.
@@ -647,7 +649,7 @@ def Below(pos, dist=0):
 						  lambda self, dx, dy, dz: Vector(dx, dy, self.height / 2 - dz))
 
 def leftSpecHelper(syntax, pos, dist, axis, toComponents, makeOffset):
-	extras = set()
+	prop = {'position': 1}
 	dType = underlyingType(dist)
 	if dType is float or dType is int:
 		dx, dy, dz = toComponents(dist)
@@ -658,12 +660,12 @@ def leftSpecHelper(syntax, pos, dist, axis, toComponents, makeOffset):
 	if isinstance(pos, OrientedPoint):		# TODO too strict?
 		val = lambda self, spec: pos.relativize(makeOffset(self, dx, dy, dz))
 		new = DelayedArgument({axis}, val)
-		extras.add('heading')
+		prop = {'parentOrientation': 3}
 	else:
 		pos = toVector(pos, f'specifier "{syntax} X" with X not a vector')
 		val = lambda self, spec: pos.offsetRotated(self.heading, makeOffset(self, dx, dy, dz))
 		new = DelayedArgument({axis, 'heading'}, val)
-	return Specifier('position', new, optionals=extras)
+	return Specifier(prop, new)
 
 def Following(field, dist, fromPt=None):
 	"""The 'following F [from X] for D' specifier.
@@ -686,4 +688,4 @@ def Following(field, dist, fromPt=None):
 	pos = field.followFrom(fromPt, dist)
 	heading = field[pos]
 	val = OrientedVector(*pos, heading)
-	return Specifier('position', val, optionals={'heading'})
+	return Specifier('position', val, properties=('position', 'parentOrientation'))

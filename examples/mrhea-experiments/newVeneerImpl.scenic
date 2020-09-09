@@ -5,4 +5,6 @@ from scenic.simulators.gta.model import *
 
 ego = Car on road
 
-c2 = Car left of ego, ahead of of ego
+c2 = Car ahead of ego
+
+require(distance from ego to c2) > 10

@@ -14,34 +14,39 @@ class Specifier:
 
 	Any optionally-specified properties are evaluated as attributes of the primary value.
 	"""
-	def __init__(self, prop, value, deps=None, optionals={}):
-		self.property = prop
+	def __init__(self, properties, value, deps=None):
+		self.properties = properties
 		self.value = toDelayedArgument(value)
 		if deps is None:
 			deps = set()
 		deps |= requiredProperties(value)
-		if prop in deps:
-			raise RuntimeParseError(f'specifier for property {prop} depends on itself')
+		for p in properties:
+			if p in deps: 
+				raise RuntimeParseError(f'specifier for property {p} depends on itself')
 		self.requiredProperties = deps
-		self.optionals = optionals
 
-	def applyTo(self, obj, specs, optionals): # TODO: @Matthew list of specs come into here 
+	def applyTo(self, obj, specifiers, priorities):
 		"""Apply specifier to an object, including the specified optional properties."""
-		val = self.value.evaluateIn(obj, specs)
+		val = self.value.evaluateIn(obj, specifiers)
 		val = toDistribution(val)
 		assert not needsLazyEvaluation(val)
-		setattr(obj, self.property, val)
-		for opt in optionals:
-			assert opt in self.optionals
-			setattr(obj, opt, getattr(val, opt))
-
+		if not isinstance(self.properties, dict):
+			self.properties = {self.properties: -1} # defaults use -1
+		for prop in self.properties: # TODO: Call out to function of specifier, (e.g. setProperty)
+			if hasattr(obj, prop):   
+				if self.properties[prop] > priorities[prop]:
+					setattr(obj, prop, val)
+				else:
+					continue
+			else:
+				setattr(obj, prop, val)
+				
 	def __str__(self):
 		return f'<Specifier of {self.property}>'
 
 class ModifyingSpecifier(Specifier):
-	def __init__(self, prop, value, deps=None, optionals={}):
-		super().__init__(prop, value, deps, optionals)
-
+	def __init__(self, prop, value, deps=None):
+		super().__init__(prop, value, deps)
 
 ## Support for property defaults
 

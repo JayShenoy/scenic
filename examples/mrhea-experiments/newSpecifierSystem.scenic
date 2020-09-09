@@ -3,6 +3,6 @@ setLocalMap(__file__, '../gta/map.npz')
 
 from scenic.simulators.gta.model import *
 
-ego = Car on road
+spot = OrientedPoint on curb, with roll 20 deg
 
-c2 = Car left of ego, ahead of of ego
+ego = Car at spot

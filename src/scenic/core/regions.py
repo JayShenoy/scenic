@@ -620,8 +620,10 @@ class PointSetRegion(Region):
 		def sampler(intRegion):
 			o = intRegion.regions[1]
 			center, radius = o.circumcircle
+			# TODO: @Matthew ValueError: Searching for 3d point in 2d KDTree
+			# Better way to fix this? 
 			possibles = (Vector(*self.kdTree.data[i])
-			             for i in self.kdTree.query_ball_point(center, radius))
+			             for i in self.kdTree.query_ball_point(center[:2], radius))
 			intersection = [p for p in possibles if o.containsPoint(p)]
 			if len(intersection) == 0:
 				raise RejectionException(f'empty intersection of Regions {self} and {o}')

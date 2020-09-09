@@ -13,4 +13,4 @@ def angled(angle, epsilon=10 deg):
 
 require angled(90 deg)
 
-createPlatoonAt(c2, 2, dist=(2, 5))
+createPlatoonAt(c2, 2, dist=Range(2, 5))
