@@ -25,20 +25,14 @@ class Specifier:
 				raise RuntimeParseError(f'specifier for property {p} depends on itself')
 		self.requiredProperties = deps
 
-	def applyTo(self, obj, specifiers, priorities):
+	def applyTo(self, obj, modifiers):
 		"""Apply specifier to an object, including the specified optional properties."""
-		val = self.value.evaluateIn(obj, specifiers)
+		val = self.value.evaluateIn(obj, modifiers) # TODO: @Matthew val should be a dict
 		val = toDistribution(val)
 		assert not needsLazyEvaluation(val)
 		if not isinstance(self.properties, dict):
 			self.properties = {self.properties: -1} # defaults use -1
 		for prop in self.properties: # TODO: Call out to function of specifier, (e.g. setProperty)
-			if hasattr(obj, prop):   
-				if self.properties[prop] > priorities[prop]:
-					setattr(obj, prop, val)
-				else:
-					continue
-			else:
 				setattr(obj, prop, val)
 				
 	def __str__(self):

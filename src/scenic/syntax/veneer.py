@@ -422,6 +422,7 @@ def On(region):
 		on <region>
 		on <object>
 	"""
+	# TODO: @Matthew Helper function for delayed argument checks if modifying or not
 	region = toType(region, Region, 'specifier "on R" with R not a Region')
 	extras = {'heading'} if alwaysProvidesOrientation(region) else {}
 	return ModifyingSpecifier({'position': 1, 'parentOrientation': 2}, Region.uniformPointIn(region))
@@ -507,9 +508,8 @@ def Facing(heading):
 	"""
 	if isinstance(heading, VectorField):
 		# TODO: @Matthew Fix this call (properties shouldn't be there)
-		return Specifier('heading', DelayedArgument({'position'},
-		                                            lambda self, spec: heading[self.position]),
-						 properties=('yaw', 'pitch'))
+		return Specifier({'yaw': 1, 'pitch': 1, 'roll': 1}, DelayedArgument({'position'},
+		                                            lambda self, spec: heading[self.position]))
 	else:
 		heading = toHeading(heading, 'specifier "facing X" with X not a heading or vector field')
 		return Specifier({'yaw': 1, 'pitch': 2, 'roll': 3}, heading)
@@ -688,4 +688,4 @@ def Following(field, dist, fromPt=None):
 	pos = field.followFrom(fromPt, dist)
 	heading = field[pos]
 	val = OrientedVector(*pos, heading)
-	return Specifier('position', val, properties=('position', 'parentOrientation'))
+	return Specifier({'position': 1, 'parentOrientation': 3}, val)

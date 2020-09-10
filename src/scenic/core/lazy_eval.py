@@ -14,17 +14,17 @@ class LazilyEvaluable:
 		self._dependencies = ()		# TODO improve?
 		self._requiredProperties = set(requiredProps)
 
-	def evaluateIn(self, context, specifiers):
+	def evaluateIn(self, context, modifiers):
 		"""Evaluate this value in the context of an object being constructed.
 
 		The object must define all of the properties on which this value depends.
 		"""
 		assert all(hasattr(context, prop) for prop in self._requiredProperties)
-		value = self.evaluateInner(context, specifiers)
+		value = self.evaluateInner(context, modifiers)
 		assert not needsLazyEvaluation(value)	# value should not require further evaluation
 		return value
 
-	def evaluateInner(self, context, specifiers):
+	def evaluateInner(self, context, modifiers):
 		"""Actually evaluate in the given context, which provides all required properties."""
 		return self
 

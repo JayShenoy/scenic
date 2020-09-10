@@ -65,33 +65,74 @@ class Constructible(Samplable):
 		specifiers = list(args)
 		for prop, val in kwargs.items():	# kwargs supported for internal use
 			specifiers.append(Specifier({prop: 1}, val))
-		properties = dict()
+		specifying = dict()
 		modifying = dict()
 		priorities = dict()
 		optionals = collections.defaultdict(list)
 		defs = self.__class__.defaults
+		'''
+		For each specifier:
+			* If a modifying specifier, modifying[p] = specifier
+			* If a specifier, and not in properties specified, properties[p] = specifier
+				- Otherwise, if property specified, check if specifier's priority is higher. 
+				- If so, replace it with specifier
+
+		Priorties are inversed: A lower priority number means semantically that it has a higher priority level
+		'''
 		for spec in specifiers:
 			assert isinstance(spec, Specifier), (name, spec)
 			props = spec.properties
-			for p in props: 
-				if p in properties: # TODO: @Matthew Relax this condition. 
-					raise RuntimeParseError(f'property "{prop}" of {name} specified twice')
-				if p in modifying:
-					raise RuntimeParseError(f'property "{prop}" of {name} modified twice')
-				priorities[p] = spec.properties[p]
-			if isinstance(spec, ModifyingSpecifier):
-				for p in props:
+			for p in props:
+				if isinstance(spec, ModifyingSpecifier):
+					if p in modifying:
+						raise RuntimeParseError(f'property "{p}" of {name} modified twice')
 					modifying[p] = spec
-			else:
-				for p in props:
-					properties[p] = spec
+				else:
+					if p in specifying:
+						if spec.properties[p] == priorities[p]:
+							raise RuntimeParseError(f'property "{p}" of {name} specified twice with the same priority')
+						if spec.properties[p] < priorities[p]:
+							specifying[p] = spec
+							priorities[p] = spec.properties[p]
+					else:
+						specifying[p] = spec
+						priorities[p] = spec.properties[p]
+
+		'''
+		If a modifying specifier specifies the property with a higher priority,
+		set the object's property to be specified by the modifying specifier. Otherwise,
+		if the property exists and the priorities match, object needs to be specified
+		by the original specifier then the resulting value is modified by the
+		modifying specifier. 
+
+		If the property is not yet being specified, the modifying specifier will 
+		act as a normal specifier for that property. 
+		'''
+		deprecate = []
+		for prop, spec in modifying.items():
+			if prop in specifying:
+				if spec.properties[prop] < priorities[prop]:   # Higher priority level, so it specifies
+					specifying[prop] = spec
+					priorities[prop] = spec.properties[prop]
+					deprecate.append(prop)
+				elif spec.properties[prop] > priorities[prop]: # Lower priority level, so deprecate
+					deprecate.append(prop)
+			else:                                              # Not specified, so specify it
+				specifying[prop] = spec
+				priorities[prop] = spec.properties[prop]
+				deprecate.append(prop)
+
+		# Delete all deprecated modifiers. Any remaining will modify a specified property 
+		for d in deprecate:
+			assert d in modifying
+			del modifying[d]
 
 		# Add any default specifiers needed
 		for prop in defs:
-			if prop not in properties:
+			if prop not in specifying:
 				spec = defs[prop]
 				specifiers.append(spec)
-				properties[prop] = spec
+				specifying[prop] = spec
 
 		# Topologically sort specifiers
 		order = []
@@ -105,7 +146,7 @@ class Constructible(Samplable):
 										'depends on itself')
 			seen.add(spec)
 			for dep in spec.requiredProperties:
-				child = properties.get(dep)
+				child = specifying.get(dep)
 				if child is None:
 					raise RuntimeParseError(f'property {dep} required by '
 											f'specifier {spec} is not specified')
@@ -119,19 +160,20 @@ class Constructible(Samplable):
 		assert len(order) == len(specifiers)
 
 		# Evaluate and apply specifiers
+		breakpoint()
 		for spec in order:
 			# TODO: @Matthew Use `order` to check for how modifying specifiers should be evaluated
-			spec.applyTo(self, order, priorities)
+			spec.applyTo(self, modifying)
 
 		# Set up dependencies
 		deps = []
-		for prop in properties:
+		for prop in specifying:
 			assert hasattr(self, prop)
 			val = getattr(self, prop)
 			deps.append(val)
 
 		super().__init__(deps)
-		self.properties = set(properties)
+		self.properties = set(specifying)
 		self.modifying = set(modifying)
 		self.priorities = set(priorities)
 
