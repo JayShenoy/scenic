@@ -115,8 +115,6 @@ class Constructible(Samplable):
 					specifying[prop] = spec
 					priorities[prop] = spec.properties[prop]
 					deprecate.append(prop)
-				elif spec.properties[prop] > priorities[prop]: # Lower priority level, so deprecate
-					deprecate.append(prop)
 			else:                                              # Not specified, so specify it
 				specifying[prop] = spec
 				priorities[prop] = spec.properties[prop]
@@ -126,7 +124,7 @@ class Constructible(Samplable):
 		for d in deprecate:
 			assert d in modifying
 			del modifying[d]
-
+		
 		# Add any default specifiers needed
 		for prop in defs:
 			if prop not in specifying:
@@ -160,7 +158,6 @@ class Constructible(Samplable):
 		assert len(order) == len(specifiers)
 
 		# Evaluate and apply specifiers
-		breakpoint()
 		for spec in order:
 			# TODO: @Matthew Use `order` to check for how modifying specifiers should be evaluated
 			spec.applyTo(self, modifying)
@@ -175,7 +172,6 @@ class Constructible(Samplable):
 		super().__init__(deps)
 		self.properties = set(specifying)
 		self.modifying = set(modifying)
-		self.priorities = set(priorities)
 
 		# Possibly register this object
 		self._register()

@@ -27,6 +27,7 @@ class Specifier:
 
 	def applyTo(self, obj, modifiers):
 		"""Apply specifier to an object, including the specified optional properties."""
+		# if hasattr(self.)
 		val = self.value.evaluateIn(obj, modifiers) # TODO: @Matthew val should be a dict
 		val = toDistribution(val)
 		assert not needsLazyEvaluation(val)
