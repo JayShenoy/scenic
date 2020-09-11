@@ -14,27 +14,27 @@ class Specifier:
 
 	Any optionally-specified properties are evaluated as attributes of the primary value.
 	"""
-	def __init__(self, properties, value, deps=None):
-		self.properties = properties
+	def __init__(self, priorities, value, deps=None):
+		self.priorities = priorities
 		self.value = toDelayedArgument(value)
+		self.modifying = dict()
 		if deps is None:
 			deps = set()
 		deps |= requiredProperties(value)
-		for p in properties:
+		for p in priorities:
 			if p in deps: 
 				raise RuntimeParseError(f'specifier for property {p} depends on itself')
 		self.requiredProperties = deps
 
-	def applyTo(self, obj, modifiers):
+	def applyTo(self, obj, modifying):
 		"""Apply specifier to an object, including the specified optional properties."""
-		# if hasattr(self.)
-		val = self.value.evaluateIn(obj, modifiers) # TODO: @Matthew val should be a dict
+		val = self.value.evaluateIn(obj, modifying) # TODO: @Matthew val should be a dict
 		val = toDistribution(val)
 		assert not needsLazyEvaluation(val)
-		if not isinstance(self.properties, dict):
-			self.properties = {self.properties: -1} # defaults use -1
-		for prop in self.properties: # TODO: Call out to function of specifier, (e.g. setProperty)
-				setattr(obj, prop, val)
+		if not isinstance(self.priorities, dict):
+			self.priorities = {self.priorities: -1} # defaults use -1
+		for prop in self.priorities: # TODO: Call out to function of specifier, (e.g. setProperty)
+			setattr(obj, prop, val)
 				
 	def __str__(self):
 		return f'<Specifier of {self.property}>'
