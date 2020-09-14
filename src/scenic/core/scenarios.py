@@ -51,7 +51,8 @@ class Scene:
 		# zoom in if requested
 		if zoom != None:
 			self.workspace.zoomAround(plt, self.objects, expansion=zoom)
-		plt.show(block=block)
+		plt.savefig("tmp.png")
+		#plt.show(block=block)
 
 class Scenario:
 	"""Scenario()

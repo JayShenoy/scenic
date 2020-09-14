@@ -1111,7 +1111,8 @@ class RoadMap:
                 x = [p[0] for p in points]
                 y = [p[1] for p in points]
                 plt.plot(x, y, 'b')
-        plt.show()
+        plt.savefig("tmp.png")
+        #plt.show()
 
     def plot_lanes(self, plt, num=500):
         '''Plot lane boundaries of road map for sanity check.'''
@@ -1133,7 +1134,8 @@ class RoadMap:
                             bounds_x.append(ref_points[i][0] + normal_vec[0] * offsets[id_])
                             bounds_y.append(ref_points[i][1] + normal_vec[1] * offsets[id_])
         plt.scatter(bounds_x, bounds_y, c='r', s=2)
-        plt.show()
+        plt.savefig("tmp.png")
+        #plt.show()
 
     def __parse_lanes(self, lanes_elem):
         '''Lanes_elem should be <left> or <right> element.
