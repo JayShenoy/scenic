@@ -128,9 +128,9 @@ class RegulatedControlAction(SteeringAction):
 			steer = past_steer - 0.1
 
 		if steer >= 0:
-			steer = min(max_steering, steer)
+			steer = min(max_steer, steer)
 		else:
-			steer = max(-max_steering, steer)
+			steer = max(-max_steer, steer)
 
 		self.throttle, self.brake, self.steer = throttle, brake, steer
 
