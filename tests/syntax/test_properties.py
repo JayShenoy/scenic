@@ -14,7 +14,7 @@ def test_position_numpy_types():
         'import numpy as np\n'
         'ego = Object with position np.single(3.4) @ np.single(7)'
     )
-    assert tuple(ego.position) == pytest.approx((3.4, 7))
+    assert tuple(ego.position) == pytest.approx((3.4, 7, 0))
 
 def test_heading_wrong_type():
     with pytest.raises(InterpreterParseError):

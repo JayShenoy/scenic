@@ -107,7 +107,7 @@ class Samplable(LazilyEvaluable):
 		assert isinstance(value, Samplable)
 		self._conditioned = value
 
-	def evaluateIn(self, context):
+	def evaluateIn(self, context, modifying):
 		"""See LazilyEvaluable.evaluateIn."""
 		value = super().evaluateIn(context)
 		# Check that all dependencies have been evaluated
@@ -180,7 +180,7 @@ class CustomDistribution(Distribution):
 	def sampleGiven(self, value):
 		return self.sampler(value)
 
-	def evaluateInner(self, context):
+	def evaluateInner(self, context, modifying):
 		if self.evaluator is None:
 			raise NotImplementedError('evaluateIn() not supported by this distribution')
 		return self.evaluator(self, context)
@@ -211,7 +211,7 @@ class TupleDistribution(Distribution, collections.abc.Sequence):
 	def sampleGiven(self, value):
 		return self.builder(value[coordinate] for coordinate in self.coordinates)
 
-	def evaluateInner(self, context):
+	def evaluateInner(self, context, modifying):
 		coordinates = (valueInContext(coord, context) for coord in self.coordinates)
 		return TupleDistribution(*coordinates, builder=self.builder)
 
@@ -256,7 +256,7 @@ class FunctionDistribution(Distribution):
 		kwargs = { name: value[arg] for name, arg in self.kwargs.items() }
 		return self.function(*args, **kwargs)
 
-	def evaluateInner(self, context):
+	def evaluateInner(self, context, modifying):
 		function = valueInContext(self.function, context)
 		arguments = tuple(valueInContext(arg, context) for arg in self.arguments)
 		kwargs = { name: valueInContext(arg, context) for name, arg in self.kwargs.items() }
@@ -325,7 +325,7 @@ class MethodDistribution(Distribution):
 		kwargs = { name: value[arg] for name, arg in self.kwargs.items() }
 		return self.method(self.object, *args, **kwargs)
 
-	def evaluateInner(self, context):
+	def evaluateInner(self, context, modifying):
 		obj = valueInContext(self.object, context)
 		arguments = tuple(valueInContext(arg, context) for arg in self.arguments)
 		kwargs = { name: valueInContext(arg, context) for name, arg in self.kwargs.items() }
@@ -369,7 +369,7 @@ class AttributeDistribution(Distribution):
 		obj = value[self.object]
 		return getattr(obj, self.attribute)
 
-	def evaluateInner(self, context):
+	def evaluateInner(self, context, modifying):
 		obj = valueInContext(self.object, context)
 		return AttributeDistribution(self.attribute, obj)
 
@@ -414,7 +414,7 @@ class OperatorDistribution(Distribution):
 			result = op(*rest)
 		return result
 
-	def evaluateInner(self, context):
+	def evaluateInner(self, context, modifying):
 		obj = valueInContext(self.object, context)
 		operands = tuple(valueInContext(arg, context) for arg in self.operands)
 		return OperatorDistribution(self.operator, obj, operands)
@@ -498,7 +498,7 @@ class MultiplexerDistribution(Distribution):
 		assert 0 <= idx < len(self.options), (idx, len(self.options))
 		return value[self.options[idx]]
 
-	def evaluateInner(self, context):
+	def evaluateInner(self, context, modifying):
 		return type(self)(valueInContext(self.index, context),
 		                  (valueInContext(opt, context) for opt in self.options))
 
@@ -542,7 +542,7 @@ class Range(Distribution):
 	def sampleGiven(self, value):
 		return random.uniform(value[self.low], value[self.high])
 
-	def evaluateInner(self, context):
+	def evaluateInner(self, context, modifying):
 		low = valueInContext(self.low, context)
 		high = valueInContext(self.high, context)
 		return Range(low, high)
@@ -616,7 +616,7 @@ class Normal(Distribution):
 	def sampleGiven(self, value):
 		return random.gauss(value[self.mean], value[self.stddev])
 
-	def evaluateInner(self, context):
+	def evaluateInner(self, context, modifying):
 		mean = valueInContext(self.mean, context)
 		stddev = valueInContext(self.stddev, context)
 		return Normal(mean, stddev)
@@ -687,7 +687,7 @@ class TruncatedNormal(Normal):
 		p = alpha_cdf + unif * (beta_cdf - alpha_cdf)
 		return mean + (stddev * Normal.cdfinv(0, 1, p))
 
-	def evaluateInner(self, context):
+	def evaluateInner(self, context, modifying):
 		mean = valueInContext(self.mean, context)
 		stddev = valueInContext(self.stddev, context)
 		return TruncatedNormal(mean, stddev, self.low, self.high)
@@ -783,7 +783,7 @@ class Options(MultiplexerDistribution):
 	def bucket(self, buckets=None):
 		return self.clone()		# already bucketed
 
-	def evaluateInner(self, context):
+	def evaluateInner(self, context, modifying):
 		if self.optWeights is None:
 			return type(self)(valueInContext(opt, context) for opt in self.options)
 		else:

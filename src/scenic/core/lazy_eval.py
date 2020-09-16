@@ -14,7 +14,7 @@ class LazilyEvaluable:
 		self._dependencies = ()		# TODO improve?
 		self._requiredProperties = set(requiredProps)
 
-	def evaluateIn(self, context, modifying):
+	def evaluateIn(self, context, modifying={}):
 		"""Evaluate this value in the context of an object being constructed.
 
 		The object must define all of the properties on which this value depends.
@@ -38,8 +38,8 @@ class DelayedArgument(LazilyEvaluable):
 		self.value = value
 		super().__init__(requiredProps)
 
-	def evaluateInner(self, context, specifiers):
-		return self.value(context, specifiers)
+	def evaluateInner(self, context, modifying={}):
+		return self.value(context, modifying)
 
 	def __getattr__(self, name):
 		return DelayedArgument(self._requiredProperties,
@@ -50,9 +50,9 @@ class DelayedArgument(LazilyEvaluable):
 		kwdargs = { name: toDelayedArgument(arg) for name, arg in kwargs.items() }
 		subprops = (darg._requiredProperties for darg in itertools.chain(dargs, kwdargs.values()))
 		props = self._requiredProperties.union(*subprops)
-		def value(context, specifiers):
-			subvalues = (darg.evaluateIn(context) for darg in dargs)
-			kwsvs = { name: darg.evaluateIn(context) for name, darg in kwdargs.items() }
+		def value(context, modifying):
+			subvalues = (darg.evaluateIn(context, modifying) for darg in dargs)
+			kwsvs = { name: darg.evaluateIn(context, modifying) for name, darg in kwdargs.items() }
 			return self.evaluateIn(context)(*subvalues, **kwsvs)
 		return DelayedArgument(props, value)
 
@@ -80,9 +80,9 @@ def makeDelayedOperatorHandler(op):
 	def handler(self, *args):
 		dargs = [toDelayedArgument(arg) for arg in args]
 		props = self._requiredProperties.union(*(darg._requiredProperties for darg in dargs))
-		def value(context):
-			subvalues = (darg.evaluateIn(context) for darg in dargs)
-			return getattr(self.evaluateIn(context), op)(*subvalues)
+		def value(context, modifying):
+			subvalues = (darg.evaluateIn(context, modifying) for darg in dargs)
+			return getattr(self.evaluateIn(context, modifying), op)(*subvalues)
 		return DelayedArgument(props, value)
 	return handler
 for op in allowedOperators:
@@ -94,16 +94,16 @@ def makeDelayedFunctionCall(func, args, kwargs):
 	kwdargs = { name: toDelayedArgument(arg) for name, arg in kwargs.items() }
 	props = set().union(*(darg._requiredProperties
 	                      for darg in itertools.chain(dargs, kwdargs.values())))
-	def value(context):
-		subvalues = (darg.evaluateIn(context) for darg in dargs)
-		kwsubvals = { name: darg.evaluateIn(context) for name, darg in kwdargs.items() }
+	def value(context, modifying):
+		subvalues = (darg.evaluateIn(context, modifying) for darg in dargs)
+		kwsubvals = { name: darg.evaluateIn(context, modifying) for name, darg in kwdargs.items() }
 		return func(*subvalues, **kwsubvals)
 	return DelayedArgument(props, value)
 
-def valueInContext(value, context):
+def valueInContext(value, context, modifying={}):
 	"""Evaluate something in the context of an object being constructed."""
 	try:
-		return value.evaluateIn(context)
+		return value.evaluateIn(context, modifying)
 	except AttributeError:
 		return value
 

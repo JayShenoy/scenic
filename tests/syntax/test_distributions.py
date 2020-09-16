@@ -41,9 +41,9 @@ def test_options_invalid_weight():
 
 def test_uniform_interval_wrong_type():
     with pytest.raises(InterpreterParseError):
-        compileScenic('x = ([], 4)')
+        compileScenic('x = Range([], 4)')
     with pytest.raises(InterpreterParseError):
-        compileScenic('x = (-10, [])')
+        compileScenic('x = Range(-10, [])')
 
 def test_uniform_interval():
     scenario = compileScenic('ego = Object at Range(100, 200) @ 0')
@@ -182,7 +182,7 @@ def test_vector_operator():
     assert any(x < 105 for x in xs)
     assert any(105 < x for x in xs)
 
-def test_vector_method_lazy():
+def test_vector_method_lazy_1():
     scenario = lazyTestScenario('vf.followFrom(Uniform(0, 90 deg) @ 0, x, steps=1).y')
     hs = [sampleEgo(scenario).heading for i in range(60)]
     assert all(h == pytest.approx(1) or h == pytest.approx(-1) for h in hs)
@@ -287,7 +287,7 @@ def test_reproducibility():
 ## Independence
 
 def test_independence():
-    scenario = compileScenic('ego = Object at (Range0, 1) @ Range(0, 1)')
+    scenario = compileScenic('ego = Object at Range(0, 1) @ Range(0, 1)')
     pos = sampleEgo(scenario).position
     assert pos.x != pos.y
 

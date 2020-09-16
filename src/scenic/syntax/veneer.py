@@ -405,7 +405,7 @@ def In(region):
 	position and orientation. 
 	"""
 	region = toType(region, Region, 'specifier "in R" with R not a Region')
-	extras = {'parentOrientation'} if alwaysProvidesOrientation(region) else {}
+	extras = {'heading'} if alwaysProvidesOrientation(region) else {}
 	return Specifier({'position': 1, 'parentOrientation': 3}, Region.uniformPointIn(region))
 
 def On(region):
@@ -425,6 +425,8 @@ def On(region):
 	# TODO: @Matthew Helper function for delayed argument checks if modifying or not
 	region = toType(region, Region, 'specifier "on R" with R not a Region')
 	extras = {'heading'} if alwaysProvidesOrientation(region) else {}
+	def helper():
+		pass
 	return ModifyingSpecifier({'position': 1, 'parentOrientation': 2}, Region.uniformPointIn(region))
 
 def alwaysProvidesOrientation(region):
@@ -507,7 +509,6 @@ def Facing(heading):
 		facing <vector> -- depends on 'roll';
 	"""
 	if isinstance(heading, VectorField):
-		# TODO: @Matthew Fix this call (properties shouldn't be there)
 		return Specifier({'yaw': 1, 'pitch': 1, 'roll': 1}, DelayedArgument({'position'},
 		                                            lambda self, spec: heading[self.position]))
 	else:
@@ -529,7 +530,9 @@ def FacingDirectlyToward(pos):
 
 	Specifies yaw and pitch angles of 'heading', depending on 'position' and 'roll'.
 	"""
-	return NotImplemented
+	pos = toVector(pos, 'specifier "facing directly toward X" with X not a vector')
+	return Specifier({'yaw': 1, 'pitch': 3}, DelayedArgument({'position'},
+												lambda self, sepc: self.position.angleTo(pos)))
 
 def FacingAwayFrom(pos):
 	""" The 'facing away from <vector>' specifier.
@@ -546,7 +549,9 @@ def FacingDirectlyAwayFrom(pos):
 
 	Specifies yaw and pitch angles of 'heading', depending on 'position' and 'roll'.
 	"""
-	return NotImplemented
+	pos = toVector(pos, 'specifier "facing away from X" with X not a vector')
+	return Specifier({'yaw': 1, 'pitch': 3}, DelayedArgument({'position'},
+												lambda self, spec: pos.angleTo(self.position)))
 
 def ApparentlyFacing(heading, fromPt=None):
 	"""The 'apparently facing <heading> [from <vector>]' specifier.

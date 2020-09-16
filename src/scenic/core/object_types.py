@@ -89,9 +89,9 @@ class Constructible(Samplable):
 					modified[p] = spec
 				else:
 					if p in properties:
-						if spec.properties[p] == priorities[p]:
+						if spec.priorities[p] == priorities[p]:
 							raise RuntimeParseError(f'property "{p}" of {name} specified twice with the same priority')
-						if spec.properties[p] < priorities[p]:
+						if spec.priorities[p] < priorities[p]:
 							properties[p] = spec
 							priorities[p] = spec.properties[p]
 							spec.modifying[p] = False
@@ -166,7 +166,6 @@ class Constructible(Samplable):
 				for mod in modified:
 					spec.modifying[mod] = True
 
-		breakpoint()
 		# Evaluate and apply specifiers
 		for spec in order:
 			spec.applyTo(self, spec.modifying)
@@ -381,6 +380,7 @@ class OrientedPoint(Point):
 	pitch: 0
 	roll: 0
 	yaw: 0
+	parentOrientation: Orientation()
 
 	mutator: PropertyDefault({'headingStdDev'}, {'additive'},
 		lambda self, specifier: HeadingMutator(self.headingStdDev))
@@ -389,7 +389,7 @@ class OrientedPoint(Point):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.heading = toScalar(self.heading, f'"heading" of {self} not a scalar')
-		self.orientation = Orientation(self.roll, self.pitch, self.yaw) # TODO: @Matthew Where to place orientation? 
+		# self.orientation = Orientation(self.roll, self.pitch, self.yaw) # TODO: @Matthew Where to place orientation? 
 
 	@cached_property
 	def visibleRegion(self):
@@ -435,6 +435,7 @@ class Object(OrientedPoint, RotatedRectangle):
 	requireVisible: True
 	regionContainedIn: None
 	cameraOffset: Vector(0, 0)
+	# shape = Shape()
 	#TODO: @Matthew Object needs shape and surface mutable attributes 
 
 	def __init__(self, *args, **kwargs):

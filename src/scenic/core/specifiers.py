@@ -37,7 +37,7 @@ class Specifier:
 			setattr(obj, prop, val)
 				
 	def __str__(self):
-		return f'<Specifier of {self.property}>'
+		return f'<Specifier of {self.priorities}>'
 
 class ModifyingSpecifier(Specifier):
 	def __init__(self, prop, value, deps=None):

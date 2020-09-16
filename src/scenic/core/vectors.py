@@ -80,7 +80,7 @@ class VectorMethodDistribution(VectorDistribution):
 		kwargs = { name: value[arg] for name, arg in self.kwargs.items() }
 		return self.method(self.object, *args, **kwargs)
 
-	def evaluateInner(self, context):
+	def evaluateInner(self, context, modifying):
 		obj = valueInContext(self.object, context)
 		arguments = tuple(valueInContext(arg, context) for arg in self.arguments)
 		kwargs = { name: valueInContext(arg, context) for name, arg in self.kwargs.items() }
@@ -140,7 +140,7 @@ def vectorDistributionMethod(method):
 
 class Orientation():
 	"""A quaternion representation of an orientation."""
-	def __init__(self, x, y=0, z=0):
+	def __init__(self, x=0, y=0, z=0):
 		self.q = Rotation.from_euler('ZYX', [z, y, x], degrees=False).as_quat()
 
 	# Convention: X axis is longitudinal pointing ahead, Z axis is vertical pointing downward, and Y axis is 
@@ -213,7 +213,7 @@ class Vector(Samplable, collections.abc.Sequence):
 	def sampleGiven(self, value):
 		return Vector(*(value[coord] for coord in self.coordinates))
 
-	def evaluateInner(self, context):
+	def evaluateInner(self, context, modifying):
 		return Vector(*(valueInContext(coord, context) for coord in self.coordinates))
 
 	@vectorOperator
@@ -287,7 +287,7 @@ class Vector(Samplable, collections.abc.Sequence):
 VectorDistribution.defaultValueType = Vector
 
 class OrientedVector(Vector):
-	def __init__(self, x, y, z, heading):
+	def __init__(self, x, y, heading, z=0):
 		super().__init__(x, y, z)
 		# TODO: @Matthew OrientedVector initializer should use Orientation 
 		self.heading = heading

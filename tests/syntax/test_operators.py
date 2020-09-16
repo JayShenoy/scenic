@@ -201,7 +201,7 @@ def test_mistyped_relative_to_lazy():
 
 def test_offset_by():
     ego = sampleEgoFrom('ego = Object at 3@2 offset by -4@10')
-    assert tuple(ego.position) == pytest.approx((-1, 12))
+    assert tuple(ego.position) == pytest.approx((-1, 12, 0))
 
 # offset along
 
