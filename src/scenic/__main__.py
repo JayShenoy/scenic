@@ -47,6 +47,11 @@ intOptions.add_argument('-d', '--delay', type=float,
 intOptions.add_argument('-z', '--zoom', help='zoom expansion factor (default 1)',
                         type=float, default=1)
 
+# Recording options
+recOptions = parser.add_argument_group('simulation recording options')
+recOptions.add_argument('-r', '--record', help='enable recording of simulations',
+                        action='store_true')
+
 # Debugging options
 debugOpts = parser.add_argument_group('debugging options')
 debugOpts.add_argument('--show-params', help='show values of global parameters',
@@ -105,6 +110,7 @@ if args.verbosity >= 1:
 
 if args.simulate:
     simulator = errors.callBeginningScenicTrace(scenario.getSimulator)
+    simulator.toggle_recording(args.record)
 
 def generateScene():
     startTime = time.time()

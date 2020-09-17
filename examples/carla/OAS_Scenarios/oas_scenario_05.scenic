@@ -5,7 +5,8 @@ The lead car suddenly stops and then resumes moving forward
 
 param map = localPath('../../../tests/formats/opendrive/maps/CARLA/Town01.xodr')  # or other CARLA map that definitely works
 param carla_map = 'Town01'
-model scenic.domains.driving.model
+# model scenic.domains.driving.model
+model scenic.simulators.carla.model
 
 MAX_BREAK_THRESHOLD = 1
 SAFETY_DISTANCE = 10

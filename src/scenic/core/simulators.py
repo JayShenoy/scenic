@@ -35,6 +35,8 @@ class Simulator:
             try:
                 simulation = self.createSimulation(scene, verbosity=verbosity)
                 result = simulation.run(maxSteps)
+                if self.is_recording():
+                    simulation.save_recordings(iterations)
             except (RejectSimulationException, RejectionException) as e:
                 if verbosity >= 2:
                     print(f'  Rejected simulation {iterations} at time step '
@@ -49,6 +51,12 @@ class Simulator:
 
     def createSimulation(self, scene, verbosity=0):
         return Simulation(scene, verbosity=verbosity)
+
+    def toggle_recording(self, record):
+        raise NotImplementedError
+
+    def is_recording(self):
+        raise NotImplementedError
 
 class Simulation:
     """A single simulation run, possibly in progress."""
@@ -241,6 +249,9 @@ class Simulation:
         The default implementation returns a tuple of the positions of all objects.
         """
         return tuple(obj.position for obj in self.objects)
+
+    def save_recordings(self, scene_name):
+        raise NotImplementedError
 
 class DummySimulator(Simulator):
     """Simulator which does nothing, for debugging purposes."""
