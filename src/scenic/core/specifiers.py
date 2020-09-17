@@ -35,7 +35,6 @@ class Specifier:
 				assert not needsLazyEvaluation(distV)
 				setattr(obj, v, distV)
 		else:
-			val = self.value.evaluateIn(obj, modifying) 
 			val = toDistribution(val)
 			assert not needsLazyEvaluation(val)
 			if not isinstance(self.priorities, dict):
