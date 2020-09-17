@@ -217,24 +217,6 @@ class Constructible(Samplable):
 			allProps = '<under construction>'
 		return f'{type(self).__name__}({allProps})'
 
-## Shapes
-
-class Shape(ABC):
-	"""An abstract base class for Scenic objects.
-
-	Scenic objects have a shape property associated with them that are 
-	implemented internally as meshes that describe its geometry. This 
-	abstract class implements the procedure to perform mesh processing
-	as well as several common methods supported by meshes that an object
-	will use. 
-	"""
-	def __init__(self):
-		pass
-
-	@abstractmethod
-	def foo(self):
-		pass
-
 ## Mutators
 
 class Mutator:
@@ -294,6 +276,25 @@ class HeadingMutator(Mutator):
 
 	def __hash__(self):
 		return hash(self.stddev)
+
+
+## Shapes
+
+class Shape(ABC):
+	"""An abstract base class for Scenic objects.
+
+	Scenic objects have a shape property associated with them that are 
+	implemented internally as meshes that describe its geometry. This 
+	abstract class implements the procedure to perform mesh processing
+	as well as several common methods supported by meshes that an object
+	will use. 
+	"""
+	def __init__(self):
+		pass
+
+	@abstractmethod
+	def foo(self):
+		pass
 
 ## Point
 
@@ -391,7 +392,7 @@ class OrientedPoint(Point):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.heading = toScalar(self.heading, f'"heading" of {self} not a scalar')
-		# self.orientation = Orientation(self.roll, self.pitch, self.yaw) # TODO: @Matthew Where to place orientation? 
+		# self.orientation = Orientation(self.roll, self.pitch, self.yaw) 
 
 	@cached_property
 	def visibleRegion(self):
@@ -441,7 +442,7 @@ class Object(OrientedPoint, RotatedRectangle):
 	requireVisible: True
 	regionContainedIn: None
 	cameraOffset: Vector(0, 0)
-	# shape = Shape()
+	# shape = Shape() 
 	#TODO: @Matthew Object needs shape and surface mutable attributes 
 
 	def __init__(self, *args, **kwargs):

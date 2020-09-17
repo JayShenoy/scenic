@@ -227,18 +227,16 @@ class TupleDistribution(Distribution, collections.abc.Sequence):
 
 def toDistribution(val):
 	"""Wrap Python data types with Distributions, if necessary.
-
 	For example, tuples containing Samplables need to be converted into TupleDistributions
 	in order to keep track of dependencies properly."""
-	for v in val: 
-		if isinstance(v, (tuple, list)):
-			coords = [toDistribution(c) for c in v]
-			if any(needsSampling(c) or needsLazyEvaluation(c) for c in coords):
-				if isinstance(v, tuple) and hasattr(v, '_fields'):		# namedtuple
-					builder = type(v)._make
-				else:
-					builder = type(v)
-				return TupleDistribution(*coords, builder=builder)
+	if isinstance(val, (tuple, list)):
+		coords = [toDistribution(c) for c in val]
+		if any(needsSampling(c) or needsLazyEvaluation(c) for c in coords):
+			if isinstance(val, tuple) and hasattr(val, '_fields'):		# namedtuple
+				builder = type(val)._make
+			else:
+				builder = type(val)
+			return TupleDistribution(*coords, builder=builder)
 	return val
 
 class FunctionDistribution(Distribution):
