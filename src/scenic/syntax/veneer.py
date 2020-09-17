@@ -293,7 +293,7 @@ def OffsetAlong(X, H, Y, specs=None):
 	if isinstance(H, VectorField):
 		H = H[X]
 	H = toHeading(H, '"X offset along H by Y" with H not a heading or vector field')
-	return X.offsetRotated(H, Y)
+	return X.offsetRotated(H, Y) # TODO: @Matthew Update to 3D coordinate system? 
 
 def RelativePosition(X, Y=None):
 	"""The 'relative position of <vector> [from <vector>]' operator.
@@ -411,16 +411,14 @@ def In(region):
 def On(region):
 	"""The 'on <X>' specifier.
 
-	Specifies 'position', with no dependencies. Optionally specifies 'heading'
-	if the given Region/Object has a preferred orientation. 
-	
-	May be composed with a single specifier, with the exception of another 
-	ModifyingSpecifier and 'at <vector>' specifier. Specifies 'position' and 
-	the pitch an roll and 'orientation'. Depends on 'yaw'. 
+	Specifies 'position' and 'parentOrientation' with no dependencies.
+
+	May be used to modify an already specified 'position' property if a compatible
+	specifier has already done so. 
 
 	Allowed forms:
 		on <region>
-		on <object>
+		on <object> 
 	"""
 	# TODO: @Matthew Helper function for delayed argument checks if modifying or not
 	region = toType(region, Region, 'specifier "on R" with R not a Region')
@@ -459,6 +457,8 @@ def Beyond(pos, offset, fromPt=None):
 		fromPt = ego()
 	fromPt = toVector(fromPt, 'specifier "beyond X by Y from Z" with Z not a vector')
 	lineOfSight = fromPt.angleTo(pos)
+	# TODO: @Matthew `val` pos.offsetRotated() should be helper function defining both position and parent orientation
+	# as dictionary of values
 	return Specifier({'position': 1, 'parentOrientation': 3}, pos.offsetRotated(lineOfSight, offset))
 
 def VisibleFrom(base):
@@ -471,6 +471,7 @@ def VisibleFrom(base):
 	"""
 	if not isinstance(base, Point):
 		raise RuntimeParseError('specifier "visible from O" with O not a Point')
+	# TODO: @Matthew Generalize uniformPointIn() for 3D regions
 	return Specifier({'position': 1}, Region.uniformPointIn(base.visibleRegion))
 
 def VisibleSpec():
@@ -486,7 +487,7 @@ def OffsetBy(offset):
 	Specifies 'position', with no dependencies.
 	"""
 	offset = toVector(offset, 'specifier "offset by X" with X not a vector')
-	pos = RelativeTo(offset, ego()).toVector()
+	pos = RelativeTo(offset, ego()).toVector() # TODO: @Matthew Update RelativeTo() 
 	return Specifier({'position': 1, 'parentOrientation': 3}, pos)
 
 def OffsetAlongSpec(direction, offset):
@@ -504,9 +505,9 @@ def Facing(heading):
 	"""The 'facing X' polymorphic specifier.
 
 	Specifies yaw and pitch angles of 'heading', with dependencies depending on the form:
-		facing <number> -- depends on 'roll';
-		facing <field> -- depends on 'position', 'roll';
-		facing <vector> -- depends on 'roll';
+		facing <number> -- No dependencies
+		facing <field> -- depends on 'position'
+		facing <vector> -- No dependencies
 	"""
 	if isinstance(heading, VectorField):
 		return Specifier({'yaw': 1, 'pitch': 1, 'roll': 1}, DelayedArgument({'position'},
@@ -637,7 +638,7 @@ def Above(pos, dist=0):
 	If the 'by <scalar/vector>' is omitted, zero is used.
 	"""
 	return leftSpecHelper('above', pos, dist, 'height', lambda dist: (0, 0, dist),
-						  lambda self, dx, dy, dz: Vector(dx, dy, -self.height / 2 - dz))
+						  lambda self, dx, dy, dz: Vector(dx, dy, -self.height / 2 + dz))
 
 def Below(pos, dist=0):
 	"""The 'below X [by Y]' polymorphic specifier.
@@ -663,9 +664,10 @@ def leftSpecHelper(syntax, pos, dist, axis, toComponents, makeOffset):
 	else:
 		raise RuntimeParseError(f'"{syntax} X by D" with D not a number or vector')
 	if isinstance(pos, OrientedPoint):		# TODO too strict?
+		prop['parentOrientation'] = 3
+		# TODO: @Matthew Add parentOrientation computation here via helper function
 		val = lambda self, spec: pos.relativize(makeOffset(self, dx, dy, dz))
 		new = DelayedArgument({axis}, val)
-		prop = {'parentOrientation': 3}
 	else:
 		pos = toVector(pos, f'specifier "{syntax} X" with X not a vector')
 		val = lambda self, spec: pos.offsetRotated(self.heading, makeOffset(self, dx, dy, dz))

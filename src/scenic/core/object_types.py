@@ -335,6 +335,7 @@ class Point(Constructible):
 	def toVector(self):
 		return self.position.toVector()
 
+	# TODO: @Matthew Does this work for 3D space? 
 	def canSee(self, other):	# TODO improve approximation?
 		for corner in other.corners:
 			if self.visibleRegion.containsPoint(corner):
@@ -380,7 +381,8 @@ class OrientedPoint(Point):
 	pitch: 0
 	roll: 0
 	yaw: 0
-	parentOrientation: Orientation()
+	# parentOrientation: Orientation()
+	# Orientation: Orientation()
 
 	mutator: PropertyDefault({'headingStdDev'}, {'additive'},
 		lambda self, specifier: HeadingMutator(self.headingStdDev))
@@ -395,6 +397,10 @@ class OrientedPoint(Point):
 	def visibleRegion(self):
 		return SectorRegion(self.position, self.visibleDistance,
 		                    self.heading, self.viewAngle)
+
+	# @cached_property
+	# def heading(self):
+	# 	return 
 
 	def relativize(self, vec):
 		pos = self.relativePosition(vec)

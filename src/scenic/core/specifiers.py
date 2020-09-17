@@ -30,11 +30,12 @@ class Specifier:
 		"""Apply specifier to an object, including the specified optional properties."""
 		val = self.value.evaluateIn(obj, modifying) # TODO: @Matthew val should be a dict
 		val = toDistribution(val)
-		assert not needsLazyEvaluation(val)
+		for v in val: 
+			assert not needsLazyEvaluation(v)
 		if not isinstance(self.priorities, dict):
 			self.priorities = {self.priorities: -1} # defaults use -1
-		for prop in self.priorities: # TODO: Call out to function of specifier, (e.g. setProperty)
-			setattr(obj, prop, val)
+		for v in val: # TODO: Call out to function of specifier, (e.g. setProperty)
+			setattr(obj, v, val[v])
 				
 	def __str__(self):
 		return f'<Specifier of {self.priorities}>'

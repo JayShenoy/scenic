@@ -222,11 +222,6 @@ class Vector(Samplable, collections.abc.Sequence):
 		x, y, z = self.x, self.y, self.z
 		c, s = cos(angle), sin(angle)
 		return Vector((c * x) - (s * y), (s * x) + (c * y))
-		'''
-		rotatedBy using quaternion multiplication:
-
-		x, y, z = self.x, self,y, self.z
-		'''
 
 	@vectorOperator
 	def offsetRotated(self, heading, offset):
