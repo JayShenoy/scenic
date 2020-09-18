@@ -87,22 +87,24 @@ leftLaneSec = initLaneSec._laneToLeft
 
 spawnPt = OrientedPoint on initLaneSec.centerline
 
-#PLACEMENT
-# 
-#Pedstrian on network.laneGroupAt(self).curb 
-#     facing 90 deg relative to roadDirection
-# Goal = Point ahead of Pedestrain by 8
-#oncomingCar = Pedestrian on leftLaneSec.centerline,
-oncomingCar = Pedstrian on network.laneGroupAt(self).curb,
-	with behavior OncomingCarBehavior(),
-	with regionContainedIn None
-
 ego = Car at spawnPt,
 	with behavior EgoBehavior(leftLaneSec)
 	
 blockingCar = Truck following roadDirection from ego for BLOCKING_CAR_DIST,
 				with viewAngle 90 deg, 
 				with blueprint "vehicle.tesla.cybertruck"
+#PLACEMENT
+# 
+#Pedstrian on network.laneGroupAt(self).curb 
+#     facing 90 deg relative to roadDirection
+# Goal = Point ahead of Pedestrain by 8
+oncomingCar = Pedestrian on initLaneSec,
+    facing 90 deg relative to roadDirection,
+#oncomiingCar = Pedestrian ahead of blockingCar,
+#oncomingCar = Pedstrian on network.laneGroupAt(self).curb,
+	with behavior OncomingCarBehavior(),
+	with regionContainedIn None
+
 
 #Make sure the oncoming Car is at a visible section of the lane
 require blockingCar can see oncomingCar
