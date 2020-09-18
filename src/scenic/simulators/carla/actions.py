@@ -73,6 +73,54 @@ class SetManualFirstGearShiftAction(VehicleAction):	# TODO eliminate
 		ctrl = _carla.VehicleControl(manual_gear_shift=True, gear=1)
 		obj.carlaActor.apply_control(ctrl)
 
+class World(object):
+    """ Class representing the surrounding environment """
+
+    def __init__(self, carla_world, agent):
+        """Constructor method"""
+        self.world = carla_world
+        self.player = agent
+
+class AutonomousAction(VehicleAction):
+	def __init__(self, initialize=False):
+		self.init = initialize
+
+	def applyTo(self, obj, sim):
+		obj.carlaActor.update_information(World(sim.world, obj.carlaActor.vehicle))
+		speed_limit = obj.carlaActor.vehicle.get_speed_limit()
+		# print("SPEED LIMIT: ", speed_limit)
+		obj.carlaActor.get_local_planner().set_speed(speed_limit)
+		control = obj.carlaActor.run_step()
+		obj._control = control
+
+class SetDestinationForAV(VehicleAction):
+	def __init__(self, spawnPt, spawnHeading, destPt, destHeading):
+		self.spawnPt = spawnPt
+		self.spawnHeading = spawnHeading
+		self.destPt = destPt
+		self.destHeading = destHeading
+
+	def applyTo(self, obj, sim):
+		# convert spawnPoint to carla's Transform format
+		loc1 = utils.scenicToCarlaLocation(self.spawnPt, z = obj.elevation)
+		# rot1 = utils.scenicToCarlaRotation(self.spawnHeading)
+		# transform1 = carla.Location(loc1, rot1)
+		
+		# convert destPt to carla's Transform format
+		loc2 = utils.scenicToCarlaLocation(self.destPt, z = obj.elevation)
+		# rot2 = utils.scenicToCarlaRotation(self.destHeading)
+		# transform2 = carla.Transform(loc2, rot2)
+
+		obj.carlaActor.set_destination(loc1, loc2, clean=True)
+
+class RerouteAVAction(VehicleAction):
+	def __init__(self, spawnPt):
+		self.spawnPt = spawnPt
+
+	def applyTo(self, obj, sim):
+		loc = utils.scenicToCarlaLocation(self.spawnPt, z = obj.elevation)
+		obj.carlaActor.reroute(loc)
+
 
 #################################################
 # Actions available to all carla.Walker objects #

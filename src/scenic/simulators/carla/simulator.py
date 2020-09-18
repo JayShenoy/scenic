@@ -18,6 +18,8 @@ from scenic.syntax.veneer import verbosePrint
 import scenic.simulators.carla.utils.utils as utils
 import scenic.simulators.carla.utils.visuals as visuals
 
+from agents.navigation.behavior_agent import BehaviorAgent
+
 
 class CarlaSimulator(DrivingSimulator):
 	def __init__(self, carla_map, address='127.0.0.1', port=2000, timeout=10,
@@ -94,13 +96,12 @@ class CarlaSimulation(DrivingSimulation):
 			elif isinstance(carlaActor, carla.Walker):
 				carlaActor.apply_control(carla.WalkerControl())
 
-			# #create by batch
-			# batch = []
-			# equivVel = utils.scenicSpeedToCarlaVelocity(obj.speed, obj.heading)
-			# print(equivVel)
-			# batch.append(carla.command.SpawnActor(blueprint, transform, carlaActor).then(carla.command.ApplyVelocity(carla.command.FutureActor, equivVel)))
-
 			obj.carlaActor = carlaActor
+
+			### Eddie : Erase this if statement block
+			if obj==self.objects[0]:
+				obj.carlaActor = BehaviorAgent(carlaActor, behavior='normal')
+				print("CREATED EGO OBJECT WITH WORLD")
 
 			# Check if ego (from carla_scenic_taks.py)
 			if obj is self.objects[0]:
@@ -128,17 +129,31 @@ class CarlaSimulation(DrivingSimulation):
 		for obj in self.objects:
 			if obj.speed is not None:
 				equivVel = utils.scenicSpeedToCarlaVelocity(obj.speed, obj.heading)
-				obj.carlaActor.set_velocity(equivVel)
+				# obj.carlaActor.set_velocity(equivVel)
+
+				if obj!=self.objects[0]:
+					obj.carlaActor.set_velocity(equivVel)
+
+		self.agents = list(obj for obj in self.objects if obj.behavior is not None)
+		print("self.agents	UPDATED")
 
 	def executeActions(self, allActions):
 		super().executeActions(allActions)
 
 		# Apply control updates which were accumulated while executing the actions
 		for obj in self.agents:
-			ctrl = obj._control
-			if ctrl is not None:
-				obj.carlaActor.apply_control(ctrl)
-				obj._control = None
+			if obj!=self.ego:
+				ctrl = obj._control
+				if ctrl is not None:
+					obj.carlaActor.apply_control(ctrl)
+					obj._control = None
+			else:
+				obj = self.ego
+				ctrl = obj._control
+				if ctrl is not None:
+					obj.carlaActor.vehicle.apply_control(ctrl)
+					obj._control = None
+
 
 	def step(self):
 		# Run simulation for one timestep
@@ -152,8 +167,14 @@ class CarlaSimulation(DrivingSimulation):
 			pygame.display.flip()
 
 	def getProperties(self, obj, properties):
+		
+		if obj==self.ego:
+			carlaActor = obj.carlaActor.vehicle
+		else:
+			carlaActor = obj.carlaActor	
+
 		# Extract Carla properties
-		carlaActor = obj.carlaActor
+		# carlaActor = obj.carlaActor
 		currTransform = carlaActor.get_transform()
 		currLoc = currTransform.location
 		currRot = currTransform.rotation

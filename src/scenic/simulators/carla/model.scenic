@@ -20,14 +20,15 @@ are from the CARLA Python API reference):
 """
 
 from scenic.domains.driving.model import *
-
 import scenic.simulators.carla.blueprints as blueprints
 from scenic.simulators.carla.behaviors import *
 from scenic.simulators.utils.colors import Color
+print("IMPORTED OTHER MODULES CORRECTLY")
 
 try:
     from scenic.simulators.carla.simulator import CarlaSimulator    # for use in scenarios
     from scenic.simulators.carla.actions import *
+    print("imported scenic.simulators.carla.actions succesfully")
 except ModuleNotFoundError:
     # for convenience when testing without the carla package
     import warnings

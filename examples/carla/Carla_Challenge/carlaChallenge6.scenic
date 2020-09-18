@@ -22,29 +22,40 @@ DIST_BTW_BLOCKING_ONCOMING_CARS = 10
 DIST_TO_INTERSECTION = 15
 
 #EGO BEHAVIOR
-behavior EgoBehavior(path):
-	current_lane = network.laneAt(self)
-	laneChangeCompleted = False
-	bypassed = False
+# behavior EgoBehavior(path):
+# 	current_lane = network.laneAt(self)
+# 	laneChangeCompleted = False
+# 	bypassed = False
 
-	try:
-		do FollowLaneBehavior(EGO_SPEED, laneToFollow=current_lane)
+# 	try:
+# 		do FollowLaneBehavior(EGO_SPEED, laneToFollow=current_lane)
 
-	interrupt when (distance to blockingCar) < DIST_THRESHOLD and not laneChangeCompleted:
-		if ego can see oncomingCar:
-			take SetBrakeAction(BREAK_INTENSITY)
-		elif (distance to oncomingCar) > YIELD_THRESHOLD:
-			do LaneChangeBehavior(path, is_oppositeTraffic=True, target_speed=EGO_SPEED)
-			do FollowLaneBehavior(EGO_SPEED, is_oppositeTraffic=True) until (distance to blockingCar) > BYPASS_DIST
-			laneChangeCompleted = True
-		else:
-			wait
+# 	interrupt when (distance to blockingCar) < DIST_THRESHOLD and not laneChangeCompleted:
+# 		if ego can see oncomingCar:
+# 			take SetBrakeAction(BREAK_INTENSITY)
+# 		elif (distance to oncomingCar) > YIELD_THRESHOLD:
+# 			do LaneChangeBehavior(path, is_oppositeTraffic=True, target_speed=EGO_SPEED)
+# 			do FollowLaneBehavior(EGO_SPEED, is_oppositeTraffic=True) until (distance to blockingCar) > BYPASS_DIST
+# 			laneChangeCompleted = True
+# 		else:
+# 			wait
 
-	interrupt when (blockingCar can see ego) and (distance to blockingCar) > BYPASS_DIST and not bypassed:
-		current_laneSection = network.laneSectionAt(self)
-		rightLaneSec = current_laneSection._laneToLeft
-		do LaneChangeBehavior(rightLaneSec, is_oppositeTraffic=False, target_speed=EGO_SPEED)
-		bypassed = True
+# 	interrupt when (blockingCar can see ego) and (distance to blockingCar) > BYPASS_DIST and not bypassed:
+# 		current_laneSection = network.laneSectionAt(self)
+# 		rightLaneSec = current_laneSection._laneToLeft
+# 		do LaneChangeBehavior(rightLaneSec, is_oppositeTraffic=False, target_speed=EGO_SPEED)
+# 		bypassed = True
+
+behavior EgoBehavior(destPt):
+	#simulation().client.set_traffic_light(...)
+
+	# destPt must be an OrientedPoint
+	spawnPt = self.position
+	spawnHeading = self.heading
+	take SetDestinationForAV(spawnPt, spawnHeading, destPt, destPt.heading)
+
+	while True:
+		take AutonomousAction()
 
 
 #OTHER BEHAVIORS
@@ -74,8 +85,13 @@ spawnPt = OrientedPoint on initLaneSec.centerline
 oncomingCar = Car on leftLaneSec.centerline,
 	with behavior OncomingCarBehavior()
 
+destPt = OrientedPoint at leftLaneSec.centerline[-1], facing roadDirection
+
+# ego = Car at spawnPt,
+# 	with behavior EgoBehavior(leftLaneSec)
+
 ego = Car at spawnPt,
-	with behavior EgoBehavior(leftLaneSec)
+	with behavior EgoBehavior(destPt)
 	
 blockingCar = Car following roadDirection from ego for BLOCKING_CAR_DIST,
 				with viewAngle 90 deg

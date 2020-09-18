@@ -13,15 +13,27 @@ EGO_TO_BICYCLE = 10
 DIST_THRESHOLD = 15
 
 #EGO BEHAVIOR: Follow lane, then perform a lane change
-behavior EgoBehavior(leftpath, origpath=[]):
-	laneChangeCompleted = False
+# behavior EgoBehavior(leftpath, origpath=[]):
+# 	laneChangeCompleted = False
 
-	try: 
-		do FollowLaneBehavior(EGO_SPEED)
+# 	try: 
+# 		do FollowLaneBehavior(EGO_SPEED)
 
-	interrupt when withinDistanceToAnyObjs(self, DIST_THRESHOLD) and not laneChangeCompleted:
-		do LaneChangeBehavior(laneSectionToSwitch=leftpath, target_speed=10)
-		laneChangeCompleted = True
+# 	interrupt when withinDistanceToAnyObjs(self, DIST_THRESHOLD) and not laneChangeCompleted:
+# 		do LaneChangeBehavior(laneSectionToSwitch=leftpath, target_speed=10)
+# 		laneChangeCompleted = True
+
+behavior EgoBehavior(destPt):
+
+	# destPt must be an OrientedPoint
+	print("EGO: ", self.position)
+	spawnPt = self.position
+	spawnHeading = self.heading
+	take SetDestinationForAV(spawnPt, spawnHeading, destPt, destPt.heading)
+
+	while True:
+		take AutonomousAction()
+
 
 #OTHER BEHAVIOR
 behavior SlowCarBehavior():

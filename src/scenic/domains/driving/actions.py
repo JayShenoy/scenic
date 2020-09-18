@@ -19,6 +19,7 @@ from scenic.core.vectors import Vector
 from scenic.core.simulators import Action
 import scenic.domains.driving.model as _model
 
+
 ## Actions available to all agents
 
 class SetPositionAction(Action):
@@ -128,9 +129,9 @@ class RegulatedControlAction(SteeringAction):
 			steer = past_steer - 0.1
 
 		if steer >= 0:
-			steer = min(max_steering, steer)
+			steer = min(max_steer, steer)
 		else:
-			steer = max(-max_steering, steer)
+			steer = max(-max_steer, steer)
 
 		self.throttle, self.brake, self.steer = throttle, brake, steer
 
@@ -138,6 +139,7 @@ class RegulatedControlAction(SteeringAction):
 		obj.setThrottle(self.throttle)
 		obj.setBraking(self.brake)
 		obj.setSteering(self.steer)
+
 
 ## Actions available to agents that can walk
 

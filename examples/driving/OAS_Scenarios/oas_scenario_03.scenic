@@ -15,13 +15,24 @@ behavior CollisionAvoidance(brake_intensity=0.3):
 		take SetBrakeAction(brake_intensity)
 
 
-behavior FollowLeadCarBehavior():
+# behavior FollowLeadCarBehavior():
 
-	try: 
-		do FollowLaneBehavior()
+# 	try: 
+# 		do FollowLaneBehavior()
 
-	interrupt when withinDistanceToAnyObjs(self, SAFETY_DISTANCE):
-		do CollisionAvoidance()
+# 	interrupt when withinDistanceToAnyObjs(self, SAFETY_DISTANCE):
+# 		do CollisionAvoidance()
+
+behavior EgoBehavior(destPt):
+	#simulation().client.set_traffic_light(...)
+
+	# destPt must be an OrientedPoint
+	spawnPt = self.position
+	spawnHeading = self.heading
+	take SetDestinationForAV(spawnPt, spawnHeading, destPt, destPt.heading)
+
+	while True:
+		take AutonomousAction()
 
 
 roads = network.roads
