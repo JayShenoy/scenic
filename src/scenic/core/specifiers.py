@@ -37,8 +37,8 @@ class Specifier:
 		else:
 			val = toDistribution(val)
 			assert not needsLazyEvaluation(val)
-			if not isinstance(self.priorities, dict):
-				self.priorities = {self.priorities: -1} # defaults use -1
+			if not isinstance(self.priorities, dict): # TODO: @Matthew Update defaults to dict 
+				self.priorities = {self.priorities: -1}
 			for prop in self.priorities: 
 				setattr(obj, prop, val)
 				

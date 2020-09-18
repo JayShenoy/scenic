@@ -70,6 +70,9 @@ class Constructible(Samplable):
 		priorities = dict()
 		optionals = collections.defaultdict(list)
 		defs = self.__class__.defaults
+
+		# TODO: @Matthew Check for incompatible specifiers used with modifying specifier (itself or `at`)
+
 		'''
 		For each specifier:
 			* If a modifying specifier, modifying[p] = specifier
@@ -279,7 +282,7 @@ class HeadingMutator(Mutator):
 
 
 ## Shapes
-
+# TODO: @Matthew `Shape` subclasses include voxels, mesh, etc 
 class Shape(ABC):
 	"""An abstract base class for Scenic objects.
 
@@ -311,7 +314,7 @@ class Point(Constructible):
 		  operators that expect an `Object`).
 		length (float): Default value zero.
 	"""
-	position: Vector(0, 0, 0) # TODO: @Matthew Extend position to 3D.
+	position: Vector(0, 0, 0)
 	width: 0
 	length: 0
 	visibleDistance: 50
@@ -375,8 +378,6 @@ class OrientedPoint(Point):
 		viewAngle (float): View cone angle for ``can see`` operator. Default
 		  value :math:`2\\pi`.
 	"""
-	# TODO: @Matthew Do OrientedPoints need Orientation instead of just a scalar heading? 
-	# TODO: @Matthew Heading is derived from Orientation 
 	heading: 0
 	viewAngle: math.tau # TODO: @Matthew Implement 2-tuple view angle for 3D views 
 	pitch: 0
@@ -398,10 +399,18 @@ class OrientedPoint(Point):
 	def visibleRegion(self):
 		return SectorRegion(self.position, self.visibleDistance,
 		                    self.heading, self.viewAngle)
+	
+	@cached_property
+	def parentOrientation(self):
+		return
 
-	# @cached_property
-	# def heading(self):
-	# 	return 
+	@cached_property
+	def heading(self): # TODO: @Matthew Derive heading from internally dervied orientation
+		self.heading = 0
+
+	@cached_property
+	def orientation(self): # TODO: @Matthew derive orientation from yaw, pitch, roll 
+		return 
 
 	def relativize(self, vec):
 		pos = self.relativePosition(vec)
@@ -442,8 +451,7 @@ class Object(OrientedPoint, RotatedRectangle):
 	requireVisible: True
 	regionContainedIn: None
 	cameraOffset: Vector(0, 0)
-	# shape = Shape() 
-	#TODO: @Matthew Object needs shape and surface mutable attributes 
+	# TODO: @Matthew Object needs a `shape` property 
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
