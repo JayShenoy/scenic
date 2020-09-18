@@ -102,12 +102,12 @@ class SetDestinationForAV(VehicleAction):
 
 	def applyTo(self, obj, sim):
 		# convert spawnPoint to carla's Transform format
-		loc1 = utils.scenicToCarlaLocation(self.spawnPt, z = obj.elevation)
+		loc1 = _utils.scenicToCarlaLocation(self.spawnPt, z = obj.elevation)
 		# rot1 = utils.scenicToCarlaRotation(self.spawnHeading)
 		# transform1 = carla.Location(loc1, rot1)
 		
 		# convert destPt to carla's Transform format
-		loc2 = utils.scenicToCarlaLocation(self.destPt, z = obj.elevation)
+		loc2 = _utils.scenicToCarlaLocation(self.destPt, z = obj.elevation)
 		# rot2 = utils.scenicToCarlaRotation(self.destHeading)
 		# transform2 = carla.Transform(loc2, rot2)
 
@@ -118,7 +118,7 @@ class RerouteAVAction(VehicleAction):
 		self.spawnPt = spawnPt
 
 	def applyTo(self, obj, sim):
-		loc = utils.scenicToCarlaLocation(self.spawnPt, z = obj.elevation)
+		loc = _utils.scenicToCarlaLocation(self.spawnPt, z = obj.elevation)
 		obj.carlaActor.reroute(loc)
 
 
