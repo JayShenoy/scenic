@@ -57,6 +57,19 @@ behavior OncomingCarBehavior(path = []):
 
 #GEOMETRY
 
+
+#behavior WalkAcrossRoadBehavior():
+#    """Walk forward behavior for pedestrians.
+#
+#    It will uniformly randomly choose either end of the sidewalk that the pedestrian is on, and have the pedestrian walk towards the endpoint.
+#    """
+#    current_sidewalk = _model.network.sidewalkAt(self.position)
+#    end_point = Uniform(*current_sidewalk.centerline.points)
+#    end_vec = end_point[0] @ end_point[1]
+#    normal_vec = Vector.normalized(end_vec)
+#    take WalkTowardsAction(goal_position=normal_vec), SetSpeedAction(speed=1)
+
+
 #Find lanes that have a lane to their left in the opposite direction
 laneSecsWithLeftLane = []
 for lane in network.lanes:
@@ -75,18 +88,26 @@ leftLaneSec = initLaneSec._laneToLeft
 spawnPt = OrientedPoint on initLaneSec.centerline
 
 #PLACEMENT
-oncomingCar = Car on leftLaneSec.centerline,
+# 
+#Pedstrian on network.laneGroupAt(self).curb 
+#     facing 90 deg relative to roadDirection
+# Goal = Point ahead of Pedestrain by 8
+#oncomingCar = Pedestrian on leftLaneSec.centerline,
+oncomingCar = Pedstrian on network.laneGroupAt(self).curb,
 	with behavior OncomingCarBehavior(),
-	with model Pedestrian
+	with regionContainedIn None
 
 ego = Car at spawnPt,
 	with behavior EgoBehavior(leftLaneSec)
 	
-blockingCar = Car following roadDirection from ego for BLOCKING_CAR_DIST,
-				with viewAngle 90 deg,
-				with model Truck
+blockingCar = Truck following roadDirection from ego for BLOCKING_CAR_DIST,
+				with viewAngle 90 deg, 
+				with blueprint "vehicle.tesla.cybertruck"
 
 #Make sure the oncoming Car is at a visible section of the lane
 require blockingCar can see oncomingCar
 require (distance from blockingCar to oncomingCar) < DIST_BTW_BLOCKING_ONCOMING_CARS
 require (distance from blockingCar to intersection) > DIST_TO_INTERSECTION
+
+## Car left of spot by 0.5,
+##    with model CarModel.models['BUS']
