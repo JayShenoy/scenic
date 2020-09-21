@@ -383,8 +383,7 @@ class OrientedPoint(Point):
 	pitch: 0
 	roll: 0
 	yaw: 0
-	# parentOrientation: Orientation()
-	# Orientation: Orientation()
+	parentOrientation: Orientation()
 
 	mutator: PropertyDefault({'headingStdDev'}, {'additive'},
 		lambda self, specifier: HeadingMutator(self.headingStdDev))
@@ -393,24 +392,19 @@ class OrientedPoint(Point):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.heading = toScalar(self.heading, f'"heading" of {self} not a scalar')
-		# self.orientation = Orientation(self.roll, self.pitch, self.yaw) 
 
 	@cached_property
 	def visibleRegion(self):
 		return SectorRegion(self.position, self.visibleDistance,
 		                    self.heading, self.viewAngle)
-	
-	@cached_property
-	def parentOrientation(self):
-		return
 
-	@cached_property
-	def heading(self): # TODO: @Matthew Derive heading from internally dervied orientation
-		self.heading = 0
+	# @cached_property
+	# def heading(self): # TODO: @Matthew Derive heading from internally dervied orientation
+	# 	self.heading = 0
 
 	@cached_property
 	def orientation(self): # TODO: @Matthew derive orientation from yaw, pitch, roll 
-		return 
+		return Orientation()
 
 	def relativize(self, vec):
 		pos = self.relativePosition(vec)

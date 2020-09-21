@@ -2,6 +2,7 @@
 """Support for lazy evaluation of expressions and specifiers."""
 
 import itertools
+import types
 
 class LazilyEvaluable:
 	"""Values which may require evaluation in the context of an object being constructed.
@@ -21,6 +22,10 @@ class LazilyEvaluable:
 		"""
 		assert all(hasattr(context, prop) for prop in self._requiredProperties)
 		value = self.evaluateInner(context, modifying)
+		if type(value) == types.FunctionType:
+			value = value(context, modifying)
+			if needsLazyEvaluation(value):
+				value = value.evaluateInner(context, modifying)
 		assert not needsLazyEvaluation(value)	# value should not require further evaluation
 		return value
 
@@ -34,7 +39,7 @@ class DelayedArgument(LazilyEvaluable):
 	The value of a DelayedArgument is given by a function mapping the context (object under
 	construction) to a value.
 	"""
-	def __init__(self, requiredProps, value):
+	def __init__(self, requiredProps, value, object=None, specifiedProps=None):
 		self.value = value
 		super().__init__(requiredProps)
 

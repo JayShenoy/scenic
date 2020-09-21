@@ -37,7 +37,7 @@ class Specifier:
 		else:
 			val = toDistribution(val)
 			assert not needsLazyEvaluation(val)
-			if not isinstance(self.priorities, dict): # TODO: @Matthew Update defaults to dict 
+			if not isinstance(self.priorities, dict): # TODO: @Matthew Convert defaults to dict
 				self.priorities = {self.priorities: -1}
 			for prop in self.priorities: 
 				setattr(obj, prop, val)
@@ -46,8 +46,8 @@ class Specifier:
 		return f'<Specifier of {self.priorities}>'
 
 class ModifyingSpecifier(Specifier):
-	def __init__(self, prop, value, deps=None):
-		super().__init__(prop, value, deps)
+	def __init__(self, priorities, value, deps=None):
+		super().__init__(priorities, value, deps)
 
 ## Support for property defaults
 

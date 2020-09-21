@@ -12,11 +12,6 @@ def test_double_specification():
     with pytest.raises(InterpreterParseError):
         compileScenic('ego = Object at 0 @ 0, at 1 @ 1')
 
-# TODO: @Matthew No longer a parse error? 
-# def test_cyclic_dependency():
-#     with pytest.raises(InterpreterParseError):
-#         compileScenic('ego = Object left of 0 @ 0, facing toward 1 @ 1')
-
 def test_lazy_cyclic_dependency():
     with pytest.raises(InterpreterParseError):
         compileScenic(
