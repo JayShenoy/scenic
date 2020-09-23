@@ -31,9 +31,9 @@ behavior EgoBehavior(path):
 		do FollowLaneBehavior(EGO_SPEED, laneToFollow=current_lane)
 
 	interrupt when (distance to blockingCar) < DIST_THRESHOLD and not laneChangeCompleted:
-		if ego can see oncomingCar:
+		if ego can see crossingPed:
 			take SetBrakeAction(BREAK_INTENSITY)
-		elif (distance to oncomingCar) > YIELD_THRESHOLD:
+		elif (distance to crossingPed) > YIELD_THRESHOLD:
 			do LaneChangeBehavior(path, is_oppositeTraffic=True, target_speed=EGO_SPEED)
 			do FollowLaneBehavior(EGO_SPEED, is_oppositeTraffic=True) until (distance to blockingCar) > BYPASS_DIST
 			laneChangeCompleted = True
@@ -46,6 +46,27 @@ behavior EgoBehavior(path):
 		do LaneChangeBehavior(rightLaneSec, is_oppositeTraffic=False, target_speed=EGO_SPEED)
 		bypassed = True
 
+behavior BadEgoBehavior(path):
+	current_lane = network.laneAt(self)
+	laneChangeCompleted = False
+	bypassed = False
+
+	try:
+		do FollowLaneBehavior(EGO_SPEED, laneToFollow=current_lane)
+
+	interrupt when (distance to blockingCar) < DIST_THRESHOLD and not laneChangeCompleted:
+		if  (distance to crossingPed) > YIELD_THRESHOLD:
+			do LaneChangeBehavior(path, is_oppositeTraffic=True, target_speed=EGO_SPEED)
+			do FollowLaneBehavior(EGO_SPEED, is_oppositeTraffic=True) until (distance to blockingCar) > BYPASS_DIST
+			laneChangeCompleted = True
+		else:
+			wait
+
+	interrupt when (blockingCar can see ego) and (distance to blockingCar) > BYPASS_DIST and not bypassed:
+		current_laneSection = network.laneSectionAt(self)
+		rightLaneSec = current_laneSection._laneToLeft
+		do LaneChangeBehavior(rightLaneSec, is_oppositeTraffic=False, target_speed=EGO_SPEED)
+		bypassed = True
 
 #OTHER BEHAVIORS
 behavior OncomingCarBehavior(path = []):
@@ -88,7 +109,7 @@ leftLaneSec = initLaneSec._laneToLeft
 spawnPt = OrientedPoint on initLaneSec.centerline
 
 ego = Car at spawnPt,
-	with behavior EgoBehavior(leftLaneSec)
+	with behavior BadEgoBehavior(leftLaneSec)
 	
 blockingCar = Truck following roadDirection from ego for BLOCKING_CAR_DIST,
 				with viewAngle 90 deg, 
@@ -98,7 +119,7 @@ blockingCar = Truck following roadDirection from ego for BLOCKING_CAR_DIST,
 #Pedstrian on network.laneGroupAt(self).curb 
 #     facing 90 deg relative to roadDirection
 # Goal = Point ahead of Pedestrain by 8
-oncomingCar = Pedestrian on initLaneSec,
+crossingPed = Pedestrian on initLaneSec,
     facing 90 deg relative to roadDirection,
 #oncomiingCar = Pedestrian ahead of blockingCar,
 #oncomingCar = Pedstrian on network.laneGroupAt(self).curb,
@@ -107,8 +128,8 @@ oncomingCar = Pedestrian on initLaneSec,
 
 
 #Make sure the oncoming Car is at a visible section of the lane
-require blockingCar can see oncomingCar
-require (distance from blockingCar to oncomingCar) < DIST_BTW_BLOCKING_ONCOMING_CARS
+require blockingCar can see crossingPed
+require (distance from blockingCar to crossingPed) < DIST_BTW_BLOCKING_ONCOMING_CARS
 require (distance from blockingCar to intersection) > DIST_TO_INTERSECTION
 
 ## Car left of spot by 0.5,
