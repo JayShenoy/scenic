@@ -378,7 +378,7 @@ class OrientedPoint(Point):
 		viewAngle (float): View cone angle for ``can see`` operator. Default
 		  value :math:`2\\pi`.
 	"""
-	heading: 0
+	# heading: 0
 	viewAngle: math.tau # TODO: @Matthew Implement 2-tuple view angle for 3D views 
 	pitch: 0
 	roll: 0
@@ -399,12 +399,14 @@ class OrientedPoint(Point):
 		                    self.heading, self.viewAngle)
 
 	@cached_property
-	def orientation(self): # TODO: @Matthew derive orientation from yaw, pitch, roll 
-		return 
+	def orientation(self):
+		o = Orientation(self.yaw, self.pitch, self.roll)
+		return o * self.parentOrientation
 
-	# @cached_property
-	# def heading(self): # TODO: @Matthew Derive heading from internally dervied orientation
-	# 	self.heading = self.orientation.get_rotangle(heading=True)
+	@cached_property
+	def heading(self):
+		eulerAngles = self.orientation.get_euler()
+		return eulerAngles[0] * self.orientation.invert_rotation() 
 
 	def relativize(self, vec):
 		pos = self.relativePosition(vec)
