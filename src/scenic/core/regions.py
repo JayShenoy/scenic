@@ -120,7 +120,6 @@ class Region(Samplable):
 		if self.orientation is None:
 			return vec
 		else:
-			# TODO: @pytest Updated to include z-component. Is this correct?
 			return OrientedVector(vec.x, vec.y, vec.z, self.orientation[vec])
 
 	def __str__(self):
@@ -195,7 +194,6 @@ class CircularRegion(Region):
 		point = point.toVector()
 		return point.distanceTo(self.center) <= self.radius
 
-	# TODO: @pytest Update to 3D 
 	def uniformPointInner(self):
 		x, y, z = self.center
 		r = random.triangular(0, self.radius, self.radius)
@@ -264,7 +262,6 @@ class SectorRegion(Region):
 		return point.distanceTo(self.center) <= self.radius
 
 	def uniformPointInner(self):
-		# TODO: @pytest Update to 3d
 		x, y, z = self.center
 		heading, angle, maxDist = self.heading, self.angle, self.radius
 		r = random.triangular(0, maxDist, maxDist)

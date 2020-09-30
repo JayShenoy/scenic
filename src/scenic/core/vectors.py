@@ -1,7 +1,7 @@
 """Scenic vectors and vector fields."""
 
 import math
-from math import sin, cos
+from math import sin, cos, sqrt, atan
 import random
 import collections
 import itertools
@@ -140,43 +140,32 @@ def vectorDistributionMethod(method):
 
 class Orientation():
 	"""A quaternion representation of an orientation."""
-	def __init__(self, x=0, y=0, z=0):
-		self.q = Rotation.from_euler('ZYX', [z, y, x], degrees=False).as_quat()
+	def __init__(self, yaw=0, pitch=0, roll=0):
+		self.q = Rotation.from_euler('ZXY', [yaw, pitch, roll], degrees=False).as_quat()
 
-	# Convention: X axis is longitudinal pointing ahead, Z axis is vertical pointing downward, and Y axis is 
-	# lateral pointing to accomodate right-hand rule. 
 	@property
 	def w(self):
 		return self.q[3]
 
 	@property
-	def x(self): # roll
-		return self.q[2]
+	def x(self):
+		return self.q[0]
 
 	@property
-	def y(self): # pitch 
+	def y(self):  
 		return self.q[1]
 
 	@property
-	def z(self): # yaw 
-		return self.q[0]
-
-	def get_rotvec(self):
-		r = Rotation.from_quat(self.q)
-		return r.as_rotvec()
-
-	def get_rotangle(self):
-		rotvec = self.get_rotvec()
-		r = Rotation.from_rotvec(rotvec)
-		return r.magnitude()
+	def z(self): 
+		return self.q[2]
 
 	def get_euler(self):
 		r = Rotation.from_quat(self.q)
-		return r.as_euler('ZYX', degrees=False)
+		return r.as_euler('ZXY', degrees=False)
 
-	def toHeading(self):
-		# TODO: @Matthew Inherit toHeading() or implement its own?
-		return self.get_euler()
+	def invert_rotation(self):
+		r = Rotation.from_quat(self.q)
+		return r.inv().as_quat()
 
 	def __mul__(self, other):
 		if type(other) is not Orientation:
@@ -215,6 +204,20 @@ class Vector(Samplable, collections.abc.Sequence):
 
 	def evaluateInner(self, context, modifying):
 		return Vector(*(valueInContext(coord, context) for coord in self.coordinates))
+
+	@vectorOperator
+	def applyRotation(self, rotation):
+		breakpoint()
+		r = Rotation.from_quat(rotation)
+		return r.apply(list(self.coordinates))
+
+	@vectorOperator
+	def cartestianToSpherical(self):
+		"""Returns this vector in spherical coordinates"""
+		rho = sqrt(pow(self.x, 2) + pow(self.y, 2) + pow(self.z, 2))
+		theta = atan(self.y / self.x)
+		phi = atan(sqrt(pow(self.x, 2) + pow(self.y, 2))/self.z)
+		return Vector(rho, theta, phi)
 
 	@vectorOperator
 	def rotatedBy(self, angle):
@@ -284,7 +287,7 @@ VectorDistribution.defaultValueType = Vector
 class OrientedVector(Vector):
 	def __init__(self, x, y, heading, z=0):
 		super().__init__(x, y, z)
-		# TODO: @Matthew OrientedVector initializer should use Orientation 
+		# TODO: @Matthew OrientedVector initializer should use Orientation
 		self.heading = heading
 
 	def toHeading(self):
@@ -301,6 +304,7 @@ class OrientedVector(Vector):
 
 class VectorField:
 	def __init__(self, name, value):
+		# TODO: @Matthew needs to return an orientation, not just 3 angles 
 		self.name = name
 		self.value = value
 		self.valueType = float

@@ -54,8 +54,11 @@ class Car:
 		model (`CarModel`): Model of the car.
 		color (`CarColor` or RGB tuple): Color of the car.
 	"""
-	position: Point on road
-	heading: (roadDirection at self.position) + self.roadDeviation
+	position: Point on road 
+
+	# gets value at position in vector field, needs to return an orientation (3 angles)
+	parentOrientation: roadDirection at self.position # TODO: @Matthew Use parentOrientation
+	heading: (roadDirection at self.position) + self.roadDeviation # TODO: @Matthew heading is derived now, 3 angles are directly assigned
 	roadDeviation: 0
 	width: self.model.width
 	length: self.model.length

@@ -76,5 +76,4 @@ def test_incipit_as_name():
     """
     for name in ('distance', 'offset'):
         ego = sampleEgoFrom(f'{name} = 4\n' f'ego = Object at {name} @ 0')
-        # TODO: Updated this to include z=0 component. Check if this is correct way to do so. 
         assert tuple(ego.position) == (4, 0, 0)

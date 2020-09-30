@@ -82,7 +82,6 @@ def canCoerceType(typeA, typeB):
 
 def canCoerce(thing, ty):
 	"""Can this value be coerced into the given type?"""
-	# TODO: @Matthew Add special case for tuples/list 
 	tt = underlyingType(thing)
 	return canCoerceType(tt, ty)
 
@@ -96,16 +95,16 @@ def coerce(thing, ty):
 	elif ty is Heading:
 		if isinstance(thing, tuple) or isinstance(thing, list):
 			if len(thing) == 2: 
-				raise ValueError("Heading must have 1 or 3 components") # TODO: @Matthew error handle incorrectly sized orientations
+				raise ValueError("Heading must have 1 or 3 components") 
 			if len(thing) == 3: thing = Orientation(thing[0], thing[1], thing[2])
 			else: return thing[0].toHeading() if hasattr(thing[0], 'toHeading') else float(thing[0])
 		return thing.toHeading() if hasattr(thing, 'toHeading') else float(thing)
 	elif ty is Vector:
 		if isinstance(thing, tuple) or isinstance(thing, list):
-			if   len(thing) == 1: thing = Vector(thing[0])
+			if   len(thing) == 1: raise ValueError("vectors cannot be of length 1")
 			elif len(thing) == 2: thing = Vector(thing[0], thing[1])
 			elif len(thing) == 3: thing = Vector(thing[0], thing[1], thing[2])
-			else: raise ValueError("Vectors cannot be greater than length 3") # TODO: @Matthew error handle incorrectly sized Vectors 
+			else: raise ValueError("Vectors cannot be greater than length 3")  
 			return thing.toVector()
 		return thing.toVector()
 	else:
@@ -125,6 +124,7 @@ def toTypes(thing, types, typeError='wrong type'):
 	"""Convert something to any of the given types, printing an error if impossible."""
 	if needsLazyEvaluation(thing):
 		# cannot check the type now; create proxy object to check type after evaluation
+		breakpoint()
 		return TypeChecker(thing, types, typeError)
 	else:
 		return coerceToAny(thing, types, typeError)

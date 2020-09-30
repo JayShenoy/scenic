@@ -65,7 +65,7 @@ from scenic.core.object_types import Constructible
 from scenic.core.specifiers import Specifier, ModifyingSpecifier
 from scenic.core.lazy_eval import DelayedArgument
 from scenic.core.utils import RuntimeParseError
-from scenic.core.vectors import OrientedVector
+from scenic.core.vectors import OrientedVector, Orientation
 from scenic.core.external_params import ExternalParameter
 
 ### Internals
@@ -266,13 +266,14 @@ def RelativeTo(X, Y):
 			yp = Y[pos] if yf else toType(Y, fieldType, error)
 			return xp + yp
 		return DelayedArgument({'position'}, helper)
-	elif isinstance(Y, Object) or isinstance(Y, OrientedPoint):
-		if not isinstance(X, float):
-			raise RuntimeParseError('"X relative to Y" with Y an object or oriented point, but X not a float')
-		# return X + Y.prop # TODO: @Matthew Need context for which property? 
-		def helper(context, spec):
-			pass
-		return DelayedArgument(value=helper, object=Y, specifiedProps='')
+	# elif isinstance(Y, Object) or isinstance(Y, OrientedPoint):
+	# 	if not isinstance(X, float):
+	# 		raise RuntimeParseError('"X relative to Y" with Y an object or oriented point, but X not a float')
+	# 	# return X + Y.prop # TODO: @Matthew Need context for which property?
+	# 	def helper(context, spec):
+	# 		breakpoint()
+	# 		print("hi")
+	# 	return DelayedArgument({'parentOrientation'}, value=helper)
 	else:
 		if isinstance(X, OrientedPoint):	# TODO too strict?
 			if isinstance(Y, OrientedPoint):
@@ -413,9 +414,7 @@ def In(region):
 	"""
 	region = toType(region, Region, 'specifier "in R" with R not a Region')
 	extras = {'heading'} if alwaysProvidesOrientation(region) else {}
-	def helper(context, modifying):
-		return {'position': Region.uniformPointIn(region), 'parentOrientation': 0}
-	return Specifier({'position': 1, 'parentOrientation': 3}, helper)
+	return Specifier({'position': 1, 'parentOrientation': 3}, {'position': Region.uniformPointIn(region), 'parentOrientation': 0})
 
 def On(region):
 	"""The 'on <X>' specifier.
@@ -432,9 +431,7 @@ def On(region):
 	# TODO: @Matthew Helper function for delayed argument checks if modifying or not
 	region = toType(region, Region, 'specifier "on R" with R not a Region')
 	extras = {'heading'} if alwaysProvidesOrientation(region) else {}
-	def helper(context, spec):
-		return {'position': Region.uniformPointIn(region), 'parentOrientation': 0}
-	return ModifyingSpecifier({'position': 1, 'parentOrientation': 2}, helper)
+	return ModifyingSpecifier({'position': 1, 'parentOrientation': 2}, {'position': Region.uniformPointIn(region), 'parentOrientation': 0})
 
 def alwaysProvidesOrientation(region):
 	"""Whether a Region or distribution over Regions always provides an orientation."""
@@ -498,9 +495,8 @@ def OffsetBy(offset):
 	Specifies 'position', with no dependencies.
 	"""
 	offset = toVector(offset, 'specifier "offset by X" with X not a vector')
-	pos = RelativeTo(offset, ego()).toVector()
-	return Specifier({'position': 1, 'parentOrientation': 3}, 
-					 {'position': pos, 'parentOrientation': 0})
+	value = {'position': RelativeTo(offset, ego()).toVector(), 'parentOrientation': ego().parentOrientation}
+	return Specifier({'position': 1, 'parentOrientation': 3}, value)
 
 def OffsetAlongSpec(direction, offset):
 	"""The 'offset along X by Y' polymorphic specifier.
@@ -511,8 +507,9 @@ def OffsetAlongSpec(direction, offset):
 		offset along <heading> by <vector>
 		offset along <field> by <vector>
 	"""
-	return Specifier({'position': 1, 'parentOrientation': 3}, 
-					 {'position': OffsetAlong(ego(), direction, offset), 'parentOrientation': 0})
+	pos = OffsetAlong(ego(), direction, offset)
+	parentOrientation = ego().parentOreintation
+	return Specifier({'position': 1, 'parentOrientation': 3},  {'position': pos, 'parentOrientation': parentOrientation})
 
 def Facing(heading):
 	"""The 'facing X' polymorphic specifier.
@@ -522,40 +519,56 @@ def Facing(heading):
 		facing <field> -- depends on 'position', 'parentOrientation'
 		facing <vector> -- depends on 'parentOrientation'
 	"""
-	# TODO: @Matthew Both cases need `value` of Specifier() to be a dict
 	if isinstance(heading, VectorField):
 		def helper(context, spec):
-			return DelayedArgument({'position', 'parentOrientation'}, 
-						lambda self, spec: heading[self.position])
-		return Specifier({'yaw': 1, 'pitch': 1, 'roll': 1}, helper)
+			headingAtPos = heading[context.position] # TODO: @Matthew Needs to return an orientation
+			inverseQuat = context.parentOrientation.invert_rotation
+			desiredQuat = inverseQuat * headingAtPos 
+			euler = desiredQuat.get_euler()
+			return {'yaw': euler[0], 'pitch': euler[1], 'roll': euler[2]}
+			# return heading[context.position]
+		return Specifier({'yaw': 1, 'pitch': 1, 'roll': 1}, DelayedArgument({'position', 'parentOrientation'}, helper))
 	else:
 		def helper(context, spec):
-			return DelayedArgument({'parentOrientation'},
-						lambda self, spec: toHeading(heading, 'specifier "facing X" with X not a heading or vector field'))
-		return Specifier({'yaw': 1, 'pitch': 1, 'roll': 1}, helper) 
+			orientation = Orientation(heading[0], heading[1], heading[2])
+			inverseQuat = context.parentOrientation.invert_rotation
+			desiredQuat = inverseQuat * orientation 
+			euler = desiredQuat.get_euler()
+			return {'yaw': euler[0], 'pitch': euler[1], 'roll': euler[2]}
+			# return toHeading(heading, 'specifier "facing X" with X not a heading or vector field')
+		return Specifier({'yaw': 1, 'pitch': 1, 'roll': 1}, DelayedArgument({'parentOrientation'}, helper))
 
 def FacingToward(pos):
 	"""The 'facing toward <vector>' specifier.
 
-	Specifies the yaw angle of 'heading', depending on 'position', 'roll',
+	Specifies the yaw and pitch angle with priorities 1 and 3 respectively, depends on position.
 	and 'pitch'.
 	"""
 	pos = toVector(pos, 'specifier "facing toward X" with X not a vector')
 	def helper(context, spec):
-		return DelayedArgument({'position', 'parentOrientation'}, 
-					lambda self, spec: {'position': self.position.angleTo(pos)})
-	return Specifier({'yaw': 1, 'pitch': 3}, helper)
+		direction = pos - context.position
+		inverseQuat = context.parentOrientation.invert_rotation()
+		rotated = direction.applyRotation(inverseQuat)
+		sphericalCoords = rotated.cartestianToSpherical() # Ignore the rho, sphericalCoords[0]
+		return {'yaw': sphericalCoords[1], 'pitch': sphericalCoords[2]}
+	return Specifier({'yaw': 1, 'pitch': 3}, DelayedArgument({'position', 'parentOrientation'}, helper))
 
 def FacingDirectlyToward(pos):
 	"""The 'facing directly toward <vector>' specifier.
 
-	Specifies yaw and pitch angles of 'heading', depending on 'position' and 'roll'.
+	Specifies yaw and pitch with priority 1, depends on position.
 	"""
 	pos = toVector(pos, 'specifier "facing directly toward X" with X not a vector')
 	def helper(context, spec):
-		return DelayedArgument({'position', 'parentOrientation'}, 
-					lambda self, sepc: {'position': self.position.angleTo(pos)})
-	return Specifier({'yaw': 1, 'pitch': 3}, helper)
+		'''
+		Same process as above, except by default also specify the pitch euler angle 
+		'''
+		direction = pos - context.position
+		inverseQuat = context.parentOrientation.invert_rotation()
+		rotated = direction.applyRotation(inverseQuat)
+		sphericalCoords = rotated.cartestianToSpherical()
+		return {'yaw': sphericalCoords[1], 'pitch': sphericalCoords[2]}
+	return Specifier({'yaw': 1, 'pitch': 1}, DelayedArgument({'position', 'parentOrientation'}, helper))
 
 def FacingAwayFrom(pos):
 	""" The 'facing away from <vector>' specifier.
@@ -565,9 +578,16 @@ def FacingAwayFrom(pos):
 	"""
 	pos = toVector(pos, 'specifier "facing away from X" with X not a vector')
 	def helper(context, spec):
-		return DelayedArgument({'position', 'parentOrientation'}, 
-					lambda self, spec: {'position': pos.angleTo(self.position)})
-	return Specifier({'yaw': 1, 'heading': 2, 'pitch': 3}, helper)
+		'''
+		As in FacingToward, except invert the resulting rotation axis 
+		'''
+		direction = context.position - pos
+		inverseQuat = context.parentOrientation.invert_rotation()
+		rotated = direction.applyRotation(inverseQuat)
+		sphericalCoords = rotated.cartestianToSpherical()
+		return {'yaw': sphericalCoords[1], 'pitch': sphericalCoords[2]}
+		# return {'heading': pos.angleTo(context.position)}
+	return Specifier({'yaw': 1, 'pitch': 3}, DelayedArgument({'position', 'parentOrientation'}, helper))
 
 def FacingDirectlyAwayFrom(pos):
 	"""The 'facing directly away from <vector>' specifier. 
@@ -576,9 +596,12 @@ def FacingDirectlyAwayFrom(pos):
 	"""
 	pos = toVector(pos, 'specifier "facing away from X" with X not a vector')
 	def helper(context, spec):
-		return DelayedArgument({'position', 'parentOreintation'}, 
-					lambda self, spec: {'position': pos.angleTo(self.position)})
-	return Specifier({'yaw': 1, 'heading': 2, 'pitch': 3}, helper)
+		direction = context.position - pos
+		inverseQuat = context.parentOrientation.invert_rotation()
+		rotated = direction.applyRotation(inverseQuat)
+		sphericalCoords = rotated.cartestianToSpherical()
+		return {'yaw': sphericalCoords[1], 'pitch': sphericalCoords[2]}
+	return Specifier({'yaw': 1, 'pitch': 1}, DelayedArgument({'position', 'parentOrientation'}, helper))
 
 def ApparentlyFacing(heading, fromPt=None):
 	"""The 'apparently facing <heading> [from <vector>]' specifier.
@@ -593,10 +616,9 @@ def ApparentlyFacing(heading, fromPt=None):
 		if fromPt is None:
 			fromPt = ego()
 		fromPt = toVector(fromPt, 'specifier "apparently facing X from Y" with Y not a vector')
-		value = lambda self: fromPt.angleTo(self.position) + heading
+		value = lambda self: fromPt.angleTo(self.position) + heading # TODO: @Matthew Should not return lambda function
 		return value 
-	return Specifier({'yaw': 1, 'pitch': 1}, 
-	  				 {'position': DelayedArgument({'position', 'parentOrientation'}, helper)})
+	return Specifier({'yaw': 1, 'pitch': 1}, {'heading': DelayedArgument({'position', 'parentOrientation'}, helper)})
 
 def LeftSpec(pos, dist=0, specs=None):
 	"""The 'left of X [by Y]' polymorphic specifier.

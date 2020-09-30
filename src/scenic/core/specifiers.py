@@ -37,7 +37,7 @@ class Specifier:
 		else:
 			val = toDistribution(val)
 			assert not needsLazyEvaluation(val)
-			if not isinstance(self.priorities, dict): # TODO: @Matthew Convert defaults to dict
+			if not isinstance(self.priorities, dict):
 				self.priorities = {self.priorities: -1}
 			for prop in self.priorities: 
 				setattr(obj, prop, val)
@@ -85,7 +85,7 @@ class PropertyDefault:
 				for other in overriddenDefs:
 					allVals.append(other.value(context, specifier))
 				return tuple(allVals)
-			val = DelayedArgument(allReqs, concatenator)
+			val = DelayedArgument(allReqs, concatenator) # TODO: @Matthew Change to dicts 
 		else:
 			val = DelayedArgument(self.requiredProperties, self.value)
-		return Specifier(prop, val)
+		return Specifier(prop, val) # TODO: @Matthew Change to dict for prop 

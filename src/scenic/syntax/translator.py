@@ -283,7 +283,7 @@ orientedPointSpecifiers = {
 	('apparently', 'facing'): 'ApparentlyFacing',
 	('facing', 'toward'): 'FacingToward',
 	('facing',): 'Facing',
-	('facing', 'away', 'from'): 'FacingAwayFrom',
+	('facing', 'away', 'from'): 'FacingAwayFrom', # TODO: @Matthew Add facing directly away from 
 	('facing', 'directly', 'toward'): 'FacingDirectlyToward'
 }
 objectSpecifiers = {

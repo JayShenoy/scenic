@@ -76,19 +76,16 @@ def test_offset_by():
     assert tuple(ego.position) == pytest.approx((-5, 45, 0))
 
 def test_offset_by_no_ego():
-    # TODO: @pytest Updated to include z=0 component
     with pytest.raises(InterpreterParseError):
         compileScenic('ego = Object offset by 10 @ 40')
 
 def test_offset_along():
-    # TODO: @pytest Updated to include z=0 component
     ego = sampleEgoFrom(
         'ego = Object at 10 @ 40\n'
         'ego = Object offset along -90 deg by -10 @ 5'
     )
     assert tuple(ego.position) == pytest.approx((15, 50, 0))
 
-# TODO: @pytest Tests below here updated to include z=0 component
 def test_offset_along_no_ego():
     with pytest.raises(InterpreterParseError):
         compileScenic('ego = Object offset along 0 by 10 @ 0')
@@ -118,14 +115,12 @@ def test_right_of_vector_by():
     assert tuple(ego.position) == pytest.approx((30.5, 25, 0))
 
 def test_ahead_of_vector():
-    # TODO: @pytest Updated to include z=0 component. 
     ego = sampleEgoFrom('ego = Object ahead of 10 @ 20, facing 90 deg')
     assert tuple(ego.position) == pytest.approx((9.5, 20, 0))
     ego = sampleEgoFrom('ego = Object ahead of 10 @ 20, with length 10')
     assert tuple(ego.position) == pytest.approx((10, 25, 0))
 
 def test_ahead_of_vector_by():
-    # TODO: @pytest Updated to include z=0 component. 
     ego = sampleEgoFrom('ego = Object ahead of 10 @ 20 by 20')
     assert tuple(ego.position) == pytest.approx((10, 40.5, 0))
     ego = sampleEgoFrom('ego = Object ahead of 10 @ 20 by 20 @ 5')

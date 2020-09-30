@@ -398,13 +398,13 @@ class OrientedPoint(Point):
 		return SectorRegion(self.position, self.visibleDistance,
 		                    self.heading, self.viewAngle)
 
-	# @cached_property
-	# def heading(self): # TODO: @Matthew Derive heading from internally dervied orientation
-	# 	self.heading = 0
-
 	@cached_property
 	def orientation(self): # TODO: @Matthew derive orientation from yaw, pitch, roll 
-		return Orientation()
+		return 
+
+	# @cached_property
+	# def heading(self): # TODO: @Matthew Derive heading from internally dervied orientation
+	# 	self.heading = self.orientation.get_rotangle(heading=True)
 
 	def relativize(self, vec):
 		pos = self.relativePosition(vec)
@@ -440,7 +440,7 @@ class Object(OrientedPoint, RotatedRectangle):
 	"""
 	width: 1
 	height: 1
-	length: 1 
+	length: 1
 	allowCollisions: False
 	requireVisible: True
 	regionContainedIn: None
