@@ -30,7 +30,7 @@ class Specifier:
 		"""Apply specifier to an object, including the specified optional properties."""
 		val = self.value.evaluateIn(obj, modifying)
 		if isinstance(val, dict):
-			for v in val: 
+			for v in val:  # TODO: @Matthew Change to `for v in modifying`
 				distV = toDistribution(val[v])
 				assert not needsLazyEvaluation(distV)
 				setattr(obj, v, distV)
@@ -88,4 +88,4 @@ class PropertyDefault:
 			val = DelayedArgument(allReqs, concatenator) # TODO: @Matthew Change to dicts 
 		else:
 			val = DelayedArgument(self.requiredProperties, self.value)
-		return Specifier(prop, val) # TODO: @Matthew Change to dict for prop 
+		return Specifier(prop, val) # -1 priority for defaults

@@ -140,8 +140,10 @@ def vectorDistributionMethod(method):
 
 class Orientation():
 	"""A quaternion representation of an orientation."""
-	def __init__(self, yaw=0, pitch=0, roll=0):
-		self.q = Rotation.from_euler('ZXY', [yaw, pitch, roll], degrees=False).as_quat()
+	def __init__(self, quaternion):
+		# TODO: @Matthew SciPy typecheck 'quaternion' 
+		r = Rotation.from_quat(quaternion)
+		self.q = r.as_quat()
 
 	@property
 	def w(self):
@@ -159,18 +161,27 @@ class Orientation():
 	def z(self): 
 		return self.q[2]
 
-	def get_euler(self):
+	@classmethod 
+	def fromEuler(cls, yaw, pitch, roll):
+		return Orientation(Rotation.from_euler('ZXY', [yaw, pitch, roll], degrees=False).as_quat())
+
+	def getEuler(self):
 		r = Rotation.from_quat(self.q)
 		return r.as_euler('ZXY', degrees=False)
 
-	def invert_rotation(self):
+	def getRotation(self):
+		return Rotation.from_quat(self.q)
+
+	def invertRotation(self):
 		r = Rotation.from_quat(self.q)
-		return r.inv().as_quat()
+		return Orientation(r.inv().as_quat())
 
 	def __mul__(self, other):
 		if type(other) is not Orientation:
 			return NotImplemented
-		return other.q * self.q
+		r = Rotation.from_quat(self.q)
+		r2 = Rotation.from_quat(other.q)
+		return Orientation((r * r2).as_quat())
 
 	def __getitem__(self, index):
 		return self.q[index]
@@ -207,8 +218,9 @@ class Vector(Samplable, collections.abc.Sequence):
 
 	@vectorOperator
 	def applyRotation(self, rotation):
-		breakpoint()
-		r = Rotation.from_quat(rotation)
+		if not isinstance(rotation, Orientation):
+			return NotImplemented
+		r = rotation.getRotation()
 		return r.apply(list(self.coordinates))
 
 	@vectorOperator

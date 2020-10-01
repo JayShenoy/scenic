@@ -519,21 +519,22 @@ def Facing(heading):
 		facing <field> -- depends on 'position', 'parentOrientation'
 		facing <vector> -- depends on 'parentOrientation'
 	"""
+	# TODO: @Matthew Type check 'heading' to aovid IndexError 
 	if isinstance(heading, VectorField):
 		def helper(context, spec):
 			headingAtPos = heading[context.position] # TODO: @Matthew Needs to return an orientation
-			inverseQuat = context.parentOrientation.invert_rotation
+			inverseQuat = context.parentOrientation.invertRotation()
 			desiredQuat = inverseQuat * headingAtPos 
-			euler = desiredQuat.get_euler()
+			euler = desiredQuat.getEuler()
 			return {'yaw': euler[0], 'pitch': euler[1], 'roll': euler[2]}
 			# return heading[context.position]
 		return Specifier({'yaw': 1, 'pitch': 1, 'roll': 1}, DelayedArgument({'position', 'parentOrientation'}, helper))
 	else:
 		def helper(context, spec):
-			orientation = Orientation(heading[0], heading[1], heading[2])
-			inverseQuat = context.parentOrientation.invert_rotation
+			orientation = Orientation.fromEuler(heading[0], heading[1], heading[2])
+			inverseQuat = context.parentOrientation.invertRotation()
 			desiredQuat = inverseQuat * orientation 
-			euler = desiredQuat.get_euler()
+			euler = desiredQuat.getEuler()
 			return {'yaw': euler[0], 'pitch': euler[1], 'roll': euler[2]}
 			# return toHeading(heading, 'specifier "facing X" with X not a heading or vector field')
 		return Specifier({'yaw': 1, 'pitch': 1, 'roll': 1}, DelayedArgument({'parentOrientation'}, helper))
@@ -547,7 +548,7 @@ def FacingToward(pos):
 	pos = toVector(pos, 'specifier "facing toward X" with X not a vector')
 	def helper(context, spec):
 		direction = pos - context.position
-		inverseQuat = context.parentOrientation.invert_rotation()
+		inverseQuat = context.parentOrientation.invertRotation()
 		rotated = direction.applyRotation(inverseQuat)
 		sphericalCoords = rotated.cartestianToSpherical() # Ignore the rho, sphericalCoords[0]
 		return {'yaw': sphericalCoords[1], 'pitch': sphericalCoords[2]}
@@ -564,7 +565,7 @@ def FacingDirectlyToward(pos):
 		Same process as above, except by default also specify the pitch euler angle 
 		'''
 		direction = pos - context.position
-		inverseQuat = context.parentOrientation.invert_rotation()
+		inverseQuat = context.parentOrientation.invertRotation()
 		rotated = direction.applyRotation(inverseQuat)
 		sphericalCoords = rotated.cartestianToSpherical()
 		return {'yaw': sphericalCoords[1], 'pitch': sphericalCoords[2]}
@@ -582,7 +583,7 @@ def FacingAwayFrom(pos):
 		As in FacingToward, except invert the resulting rotation axis 
 		'''
 		direction = context.position - pos
-		inverseQuat = context.parentOrientation.invert_rotation()
+		inverseQuat = context.parentOrientation.invertRotation()
 		rotated = direction.applyRotation(inverseQuat)
 		sphericalCoords = rotated.cartestianToSpherical()
 		return {'yaw': sphericalCoords[1], 'pitch': sphericalCoords[2]}
@@ -597,7 +598,7 @@ def FacingDirectlyAwayFrom(pos):
 	pos = toVector(pos, 'specifier "facing away from X" with X not a vector')
 	def helper(context, spec):
 		direction = context.position - pos
-		inverseQuat = context.parentOrientation.invert_rotation()
+		inverseQuat = context.parentOrientation.invertRotation()
 		rotated = direction.applyRotation(inverseQuat)
 		sphericalCoords = rotated.cartestianToSpherical()
 		return {'yaw': sphericalCoords[1], 'pitch': sphericalCoords[2]}

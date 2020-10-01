@@ -58,8 +58,8 @@ class Constructible(Samplable):
 				object.__setattr__(self, prop, value)
 			super().__init__(kwargs.values())
 			self.properties = set(kwargs.keys())
-			 # TODO: @Matthew Build up dict and assert at end of init
-			return               # that it's len is == properties or something 
+			return 
+
 		# Validate specifiers
 		name = type(self).__name__
 		specifiers = list(args)
@@ -378,12 +378,11 @@ class OrientedPoint(Point):
 		viewAngle (float): View cone angle for ``can see`` operator. Default
 		  value :math:`2\\pi`.
 	"""
-	# heading: 0
 	viewAngle: math.tau # TODO: @Matthew Implement 2-tuple view angle for 3D views 
 	pitch: 0
 	roll: 0
 	yaw: 0
-	parentOrientation: Orientation()
+	parentOrientation: Orientation.fromEuler(0,0,0)
 
 	mutator: PropertyDefault({'headingStdDev'}, {'additive'},
 		lambda self, specifier: HeadingMutator(self.headingStdDev))
@@ -391,7 +390,7 @@ class OrientedPoint(Point):
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-		self.heading = toScalar(self.heading, f'"heading" of {self} not a scalar')
+		# self.heading = toScalar(self.heading, f'"heading" of {self} not a scalar')
 
 	@cached_property
 	def visibleRegion(self):
@@ -400,13 +399,13 @@ class OrientedPoint(Point):
 
 	@cached_property
 	def orientation(self):
-		o = Orientation(self.yaw, self.pitch, self.roll)
+		o = Orientation.fromEuler(self.yaw, self.pitch, self.roll)
 		return o * self.parentOrientation
 
 	@cached_property
 	def heading(self):
-		eulerAngles = self.orientation.get_euler()
-		return eulerAngles[0] * self.orientation.invert_rotation() 
+		eulerAngles = self.orientation.getEuler()
+		return eulerAngles[0] * self.orientation.invertRotation().x 
 
 	def relativize(self, vec):
 		pos = self.relativePosition(vec)
