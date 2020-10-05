@@ -12,6 +12,27 @@ from scenic.core.regions import regionFromShapelyObject
 from shapely.geometry import LineString
 import math
 
+def distance(pos1, pos2):
+    """ pos1, pos2 = (x,y) """
+    return math.sqrt(math.pow(pos1[0]-pos2[0],2) + math.pow(pos1[1]-pos2[1],2))
+
+def distanceToAnyObjs(vehicle, thresholdDistance):
+    """ checks whether there exists any obj
+    (1) in front of the vehicle, (2) on the same lane, (3) within thresholdDistance """
+    objects = simulation().objects
+    network = _model.network
+    for obj in objects:
+        if not (vehicle can see obj):
+            continue
+        if not (network.laneAt(vehicle) == network.laneAt(obj) or network.intersectionAt(vehicle)==network.intersectionAt(obj)):
+            continue
+        if distance(vehicle.position, obj.position) < 0.1:
+            # this means obj==vehicle
+            pass
+        elif distance(vehicle.position, obj.position) < thresholdDistance:
+            return True
+    return False
+
 def concatenateCenterlines(centerlines=[]):
     return PolylineRegion.unionAll(centerlines)
 
@@ -54,7 +75,7 @@ behavior WalkForwardBehavior():
 behavior ConstantThrottleBehavior(x):
     take SetThrottleAction(x)
 
-behavior FollowLaneBehavior(target_speed = 10, laneToFollow=None, is_oppositeTraffic=False):
+behavior FollowLaneBehavior(target_speed = 10, laneToFollow=None, is_oppositeTraffic=False, desired_maneuver=ManeuverType.STRAIGHT):
     """ 
     Follow's the lane on which the vehicle is at, unless the laneToFollow is specified.
     Once the vehicle reaches an intersection, by default, the vehicle will take the straight route.
@@ -120,7 +141,7 @@ behavior FollowLaneBehavior(target_speed = 10, laneToFollow=None, is_oppositeTra
         if not entering_intersection and (distance from self.position to nearby_intersection) < TRIGGER_DISTANCE_TO_SLOWDOWN:
             entering_intersection = True
             intersection_passed = False
-            straight_manuevers = filter(lambda i: i.type == ManeuverType.STRAIGHT, current_lane.maneuvers)
+            straight_manuevers = filter(lambda i: i.type == desired_maneuver, current_lane.maneuvers)
 
             if len(straight_manuevers) > 0:
                 select_maneuver = Uniform(*straight_manuevers)

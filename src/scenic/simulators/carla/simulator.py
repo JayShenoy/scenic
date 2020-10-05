@@ -173,7 +173,7 @@ class CarlaSimulation(DrivingSimulation):
 		for obj in self.objects:
 			if obj.speed is not None:
 				equivVel = utils.scenicSpeedToCarlaVelocity(obj.speed, obj.heading)
-				obj.carlaActor.set_velocity(equivVel)
+				obj.carlaActor.set_target_velocity(equivVel)
 
 	def executeActions(self, allActions):
 		super().executeActions(allActions)
@@ -275,6 +275,7 @@ class CarlaSimulation(DrivingSimulation):
 
 			bbox_recording.add_frame(bbox_data[frame_idx])
 
+		print('saved')
 		rgb_recording.save('{}_rgb.mp4'.format(scene_name))
 		semantic_recording.save('{}_semantic.mp4'.format(scene_name))
 		lidar_recording.save('{}_lidar.json'.format(scene_name))

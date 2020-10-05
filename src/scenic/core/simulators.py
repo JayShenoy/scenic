@@ -56,7 +56,7 @@ class Simulator:
         raise NotImplementedError
 
     def is_recording(self):
-        raise NotImplementedError
+        return False
 
 class Simulation:
     """A single simulation run, possibly in progress."""
