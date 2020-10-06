@@ -22,9 +22,10 @@ import scenic.simulators.carla.utils.visuals as visuals
 import scenic.simulators.carla.utils.recording_utils as rec_utils
 
 import numpy as np
+import os
 
 class CarlaSimulator(DrivingSimulator):
-	def __init__(self, carla_map, address='127.0.0.1', port=2000, timeout=10,
+	def __init__(self, carla_map, address='127.0.0.1', port=4000, timeout=10,
 		         render=True, record=False, timestep=0.1):
 		super().__init__()
 		verbosePrint('Connecting to CARLA...')
@@ -83,6 +84,7 @@ class CarlaSimulation(DrivingSimulation):
 			self.cameraManager = None
 
 		self.rgb_frame_buffer = []
+		self.depth_frame_buffer = []
 		self.semantic_frame_buffer = []
 		self.lidar_data_buffer = []
 		self.bbox_buffer = []
@@ -142,6 +144,13 @@ class CarlaSimulation(DrivingSimulation):
 						ego_hood_transform = carla.Transform(carla.Location(x=0.0, y=0.0, z=2.0))
 						self.rgb_cam = self.world.spawn_actor(bp, ego_hood_transform, attach_to=carlaActor)
 						self.rgb_cam.listen(self.process_rgb_image)
+
+						bp = self.world.get_blueprint_library().find('sensor.camera.depth')
+						bp.set_attribute('image_size_x', str(VIEW_WIDTH))
+						bp.set_attribute('image_size_y', str(VIEW_HEIGHT))
+						bp.set_attribute('fov', str(VIEW_FOV))
+						self.depth_cam = self.world.spawn_actor(bp, ego_hood_transform, attach_to=carlaActor)
+						self.depth_cam.listen(self.process_depth_image)
 
 						# Set up calibration matrix to be used for bounding box projection
 						calibration = np.identity(3)
@@ -232,6 +241,10 @@ class CarlaSimulation(DrivingSimulation):
 		image.convert(cc.Raw)
 		self.rgb_frame_buffer.append(image)
 
+	def process_depth_image(self, image):
+		image.convert(cc.LogarithmicDepth)
+		self.depth_frame_buffer.append(image)
+
 	def process_semantic_image(self, image):
 		# Save per-pixel classification for later
 		image_classes = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
@@ -246,13 +259,14 @@ class CarlaSimulation(DrivingSimulation):
 	def process_lidar_data(self, lidar_data):
 		self.lidar_data_buffer.append(lidar_data)
 
-	def save_recordings(self, scene_name):
+	def save_recordings(self, save_dir, simulation_idx):
 		if not self.record:
 			print('No recordings saved; turn on recordings for simulator to enable')
 			return
 
 		# Find frame indices for which all sensors have data (so that recordings are synchronized)
 		rgb_data = {data.frame: data for data in self.rgb_frame_buffer}
+		depth_data = {data.frame: data for data in self.depth_frame_buffer}
 		semantic_data = {data.frame: data for data, _ in self.semantic_frame_buffer}
 		frame_class_data = {data.frame: class_data for data, class_data in self.semantic_frame_buffer}
 		lidar_data = {data.frame: data for data in self.lidar_data_buffer}
@@ -262,12 +276,14 @@ class CarlaSimulation(DrivingSimulation):
 		common_frame_idxes = sorted(list(common_frame_idxes))
 
 		rgb_recording = rec_utils.VideoRecording()
+		depth_recording = rec_utils.VideoRecording()
 		semantic_recording = rec_utils.VideoRecording()
 		lidar_recording = rec_utils.LidarRecording()
 		bbox_recording = rec_utils.BBoxRecording()
 
 		for frame_idx in common_frame_idxes:
 			rgb_recording.add_frame(rgb_data[frame_idx])
+			depth_recording.add_frame(depth_data[frame_idx])
 			semantic_recording.add_frame(semantic_data[frame_idx])
 
 			classified_lidar_points = [[i.point.x, i.point.y, i.point.z, i.object_tag] for i in lidar_data[frame_idx]]
@@ -275,8 +291,37 @@ class CarlaSimulation(DrivingSimulation):
 
 			bbox_recording.add_frame(bbox_data[frame_idx])
 
-		print('saved')
-		rgb_recording.save('{}_rgb.mp4'.format(scene_name))
-		semantic_recording.save('{}_semantic.mp4'.format(scene_name))
-		lidar_recording.save('{}_lidar.json'.format(scene_name))
-		bbox_recording.save('{}_bboxes.json'.format(scene_name))
+		# Create necessary subdirectories
+		if not os.path.isdir(save_dir):
+			os.mkdir(save_dir)
+
+		# Create overarching directory for simulation
+		save_dir = os.path.join(save_dir, str(simulation_idx))
+		if not os.path.isdir(save_dir):
+			os.mkdir(save_dir)
+
+		cam_dir = os.path.join(save_dir, 'cam')
+		if not os.path.isdir(cam_dir):
+			os.mkdir(cam_dir)
+
+		depth_dir = os.path.join(save_dir, 'depth')
+		if not os.path.isdir(depth_dir):
+			os.mkdir(depth_dir)
+
+		semantic_dir = os.path.join(save_dir, 'semantic')
+		if not os.path.isdir(semantic_dir):
+			os.mkdir(semantic_dir)
+
+		lidar_dir = os.path.join(save_dir, 'lidar')
+		if not os.path.isdir(lidar_dir):
+			os.mkdir(lidar_dir)
+
+		bbox_dir = os.path.join(save_dir, 'annotations')
+		if not os.path.isdir(bbox_dir):
+			os.mkdir(bbox_dir)
+
+		rgb_recording.save(cam_dir)
+		depth_recording.save(depth_dir)
+		semantic_recording.save(semantic_dir)
+		lidar_recording.save(lidar_dir)
+		bbox_recording.save(bbox_dir)

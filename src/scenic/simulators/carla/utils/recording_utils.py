@@ -11,6 +11,7 @@ import copy
 import cv2
 import json
 import numpy as np
+import os
 
 try:
     import pygame
@@ -248,7 +249,8 @@ class BBoxRecording:
 
         return BBoxRecording(json_data)
 
-    def save(self, filepath):
+    def save(self, save_dir):
+        filepath = os.path.join(save_dir, 'bboxes.json')
         with open(filepath, 'w') as f:
             json.dump(self.frames, f)
 
@@ -281,12 +283,14 @@ class VideoRecording:
 
         return VideoRecording(frames)
 
-    def save(self, filepath):
+    def save(self, save_dir):
         if len(self.frames) == 0:
             print('Tried to save video, but no frames have been recorded')
             return
 
         frame_height, frame_width, _ = self.frames[0].shape
+
+        filepath = os.path.join(save_dir, 'vid.mp4')
 
         out = cv2.VideoWriter(
             filepath,
@@ -320,6 +324,7 @@ class LidarRecording:
 
         return LidarRecording(json_data)
 
-    def save(self, filepath):
+    def save(self, save_dir):
+        filepath = os.path.join(save_dir, 'lidar.json')
         with open(filepath, 'w') as f:
             json.dump(self.frames, f)

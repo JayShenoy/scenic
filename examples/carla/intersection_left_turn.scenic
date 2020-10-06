@@ -4,29 +4,39 @@ model scenic.domains.driving.model
 
 TRAFFIC_SPEED = 10
 EGO_SPEED = 8
-DISTANCE_THRESHOLD = 60
-BRAKE_ACTION = Range(0.4, 0.6)
+INTERSECTION_DISTANCE_THRESHOLD = 60
+INTERSECTION_BRAKE_ACTION = Range(0.4, 0.6)
 
 behavior WaitTurnBehavior(speed, intersection_lane):
-	brake_intensity = resample(BRAKE_ACTION)
+	brake_intensity = resample(INTERSECTION_BRAKE_ACTION)
 	try:
 		do FollowLaneBehavior(speed, desired_maneuver=ManeuverType.LEFT_TURN)
 
-	interrupt when network.laneAt(self) == intersection_lane and distanceToAnyObjs(self, DISTANCE_THRESHOLD):
+	interrupt when network.laneAt(self) == intersection_lane and distanceToAnyObjs(self, INTERSECTION_DISTANCE_THRESHOLD):
 		take SetBrakeAction(brake_intensity)
 
+TRAFFIC_DISTANCE_THRESHOLD = 3
+TRAFFIC_BRAKE_ACTION = Range(0.8, 1.0)
+
+behavior FollowTrafficBehavior(speed):
+	brake_intensity = resample(TRAFFIC_BRAKE_ACTION)
+	try:
+		do FollowLaneBehavior(speed)
+
+	interrupt when distanceToAnyObjs(self, TRAFFIC_DISTANCE_THRESHOLD):
+		take SetBrakeAction(brake_intensity)
 
 def createPlatoonAt(car, numCars, model=None, dist=Range(2, 8), shift=Range(-0.5, 0.5), wiggle=0):
 	lastCar = car 
 	for i in range(numCars-1):
 		center = follow roadDirection from (front of lastCar) for resample(dist)
 		pos = OrientedPoint right of center by shift, facing resample(wiggle) relative to roadDirection
-		lastCar = Car ahead of pos, with behavior FollowLaneBehavior(TRAFFIC_SPEED)
+		lastCar = Car ahead of pos, with behavior FollowTrafficBehavior(TRAFFIC_SPEED)
 
 def carAheadOfCar(car, gap, offsetX=0, wiggle=0):
 	pos = OrientedPoint at (front of car) offset by (offsetX @ gap),
 		facing resample(wiggle) relative to roadDirection
-	return Car ahead of pos, with behavior FollowLaneBehavior(TRAFFIC_SPEED)
+	return Car ahead of pos, with behavior FollowTrafficBehavior(TRAFFIC_SPEED)
 
 depth = 6
 laneGap = 3.5
@@ -67,7 +77,5 @@ opposite_lane_secs = [lane.sections[0] for lane in inter_opposite_lane_groups[0]
 ego = Car on lane_sec.centerline, with behavior WaitTurnBehavior(EGO_SPEED, connecting_lane)
 
 for opposite_lane_sec in opposite_lane_secs:
-	other = Car on opposite_lane_sec.centerline, with behavior FollowLaneBehavior(TRAFFIC_SPEED)
+	other = Car on opposite_lane_sec.centerline, with behavior FollowTrafficBehavior(TRAFFIC_SPEED)
 	createLaneAt(other)
-
-Pedestrian on crosswalk

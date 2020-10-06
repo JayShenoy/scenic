@@ -24,7 +24,7 @@ class RejectSimulationException(Exception):
 class Simulator:
     """A simulator which can import/execute scenes from Scenic."""
 
-    def simulate(self, scene, maxSteps=None, maxIterations=100, verbosity=0):
+    def simulate(self, scene, maxSteps=None, maxIterations=100, verbosity=0, save_dir='./'):
         """Run a simulation for a given scene."""
 
         # Repeatedly run simulations until we find one satisfying the requirements
@@ -36,7 +36,7 @@ class Simulator:
                 simulation = self.createSimulation(scene, verbosity=verbosity)
                 result = simulation.run(maxSteps)
                 if self.is_recording():
-                    simulation.save_recordings(iterations)
+                    simulation.save_recordings(save_dir, iterations)
             except (RejectSimulationException, RejectionException) as e:
                 if verbosity >= 2:
                     print(f'  Rejected simulation {iterations} at time step '

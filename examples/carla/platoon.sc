@@ -1,4 +1,4 @@
-param map = localPath('../OpenDrive/Town10HD.xodr')
+param map = localPath('../../tests/formats/opendrive/maps/CARLA/Town10HD.xodr')
 param carla_map = 'Town10HD'
 model scenic.domains.driving.model
 

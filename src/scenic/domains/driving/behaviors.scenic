@@ -24,8 +24,10 @@ def distanceToAnyObjs(vehicle, thresholdDistance):
     for obj in objects:
         if not (vehicle can see obj):
             continue
-        if not (network.laneAt(vehicle) == network.laneAt(obj) or network.intersectionAt(vehicle)==network.intersectionAt(obj)):
+
+        if not (network.laneAt(vehicle) == network.laneAt(obj) or network.intersectionAt(vehicle) == network.intersectionAt(obj)):
             continue
+
         if distance(vehicle.position, obj.position) < 0.1:
             # this means obj==vehicle
             pass
