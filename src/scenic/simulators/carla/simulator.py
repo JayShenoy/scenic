@@ -175,13 +175,6 @@ class CarlaSimulation(DrivingSimulation):
 								depth_cam.listen(lambda x: self.process_depth_image(x, depth_buffer))
 								sensor_dict['depth_cam_obj'] = depth_cam
 
-								# Set up calibration matrix to be used for bounding box projection
-								# calibration = np.identity(3)
-								# calibration[0, 2] = VIEW_WIDTH / 2.0
-								# calibration[1, 2] = VIEW_HEIGHT / 2.0
-								# calibration[0, 0] = calibration[1, 1] = VIEW_WIDTH / (2.0 * np.tan(VIEW_FOV * np.pi / 360.0))
-								# self.rgb_cam.calibration = calibration
-
 								bp = self.world.get_blueprint_library().find('sensor.camera.semantic_segmentation')
 								bp.set_attribute('image_size_x', str(VIEW_WIDTH))
 								bp.set_attribute('image_size_y', str(VIEW_HEIGHT))
