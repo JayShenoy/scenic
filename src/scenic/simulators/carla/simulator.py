@@ -20,12 +20,14 @@ from scenic.syntax.veneer import verbosePrint
 import scenic.simulators.carla.utils.utils as utils
 import scenic.simulators.carla.utils.visuals as visuals
 import scenic.simulators.carla.utils.recording_utils as rec_utils
+from scenic.simulators.carla.blueprints import *
 
 import numpy as np
 import os
+import json
 
 class CarlaSimulator(DrivingSimulator):
-	def __init__(self, carla_map, address='127.0.0.1', port=4000, timeout=10,
+	def __init__(self, carla_map, address='127.0.0.1', port=2000, timeout=10,
 		         render=True, record=False, timestep=0.1):
 		super().__init__()
 		verbosePrint('Connecting to CARLA...')
@@ -45,10 +47,10 @@ class CarlaSimulator(DrivingSimulator):
 		self.render = render  # visualization mode ON/OFF
 		self.record = record  # whether to save images to disk
 
-	def createSimulation(self, scene, verbosity=0):
+	def createSimulation(self, scene, verbosity=0, sensor_config=None):
 		return CarlaSimulation(scene, self.client, self.map, self.timestep,
 							   render=self.render, record=self.record,
-							   verbosity=verbosity)
+							   verbosity=verbosity, sensor_config=sensor_config)
 
 	def toggle_recording(self, record):
 		self.record = record
@@ -57,7 +59,7 @@ class CarlaSimulator(DrivingSimulator):
 		return self.record
 
 class CarlaSimulation(DrivingSimulation):
-	def __init__(self, scene, client, map, timestep, render, record, verbosity=0):
+	def __init__(self, scene, client, map, timestep, render, record, verbosity=0, sensor_config=None):
 		super().__init__(scene, timestep=timestep, verbosity=verbosity)
 		self.client = client
 		self.client.load_world(map)
@@ -83,10 +85,6 @@ class CarlaSimulation(DrivingSimulation):
 			)
 			self.cameraManager = None
 
-		self.rgb_frame_buffer = []
-		self.depth_frame_buffer = []
-		self.semantic_frame_buffer = []
-		self.lidar_data_buffer = []
 		self.bbox_buffer = []
 
 		# Create Carla actors corresponding to Scenic objects
@@ -133,42 +131,91 @@ class CarlaSimulation(DrivingSimulation):
 					self.cameraManager._recording = self.record
 
 					if self.record:
-						VIEW_WIDTH = self.hud.dim[0]
-						VIEW_HEIGHT = self.hud.dim[1]
-						VIEW_FOV = 90.0
+						if sensor_config is None:
+							raise RuntimeError('Must specify sensor configuration file when recording')
 
-						bp = self.world.get_blueprint_library().find('sensor.camera.rgb')
-						bp.set_attribute('image_size_x', str(VIEW_WIDTH))
-						bp.set_attribute('image_size_y', str(VIEW_HEIGHT))
-						bp.set_attribute('fov', str(VIEW_FOV))
-						ego_hood_transform = carla.Transform(carla.Location(x=0.0, y=0.0, z=2.0))
-						self.rgb_cam = self.world.spawn_actor(bp, ego_hood_transform, attach_to=carlaActor)
-						self.rgb_cam.listen(self.process_rgb_image)
+						with open(sensor_config, 'r') as f:
+							sensors = json.load(f)
 
-						bp = self.world.get_blueprint_library().find('sensor.camera.depth')
-						bp.set_attribute('image_size_x', str(VIEW_WIDTH))
-						bp.set_attribute('image_size_y', str(VIEW_HEIGHT))
-						bp.set_attribute('fov', str(VIEW_FOV))
-						self.depth_cam = self.world.spawn_actor(bp, ego_hood_transform, attach_to=carlaActor)
-						self.depth_cam.listen(self.process_depth_image)
+						self.sensors = []
 
-						# Set up calibration matrix to be used for bounding box projection
-						calibration = np.identity(3)
-						calibration[0, 2] = VIEW_WIDTH / 2.0
-						calibration[1, 2] = VIEW_HEIGHT / 2.0
-						calibration[0, 0] = calibration[1, 1] = VIEW_WIDTH / (2.0 * np.tan(VIEW_FOV * np.pi / 360.0))
-						self.rgb_cam.calibration = calibration
+						for sensor in sensors:
+							if sensor['type'] == 'rgb':
+								VIEW_WIDTH = sensor['settings']['VIEW_WIDTH']
+								VIEW_HEIGHT = sensor['settings']['VIEW_HEIGHT']
+								VIEW_FOV = sensor['settings']['VIEW_FOV']
 
-						bp = self.world.get_blueprint_library().find('sensor.camera.semantic_segmentation')
-						bp.set_attribute('image_size_x', str(VIEW_WIDTH))
-						bp.set_attribute('image_size_y', str(VIEW_HEIGHT))
-						self.semantic_cam = self.world.spawn_actor(bp, ego_hood_transform, attach_to=carlaActor)
-						self.semantic_cam.listen(self.process_semantic_image)
+								t_x, t_y, t_z = sensor['transform']
+								sensor_transform = carla.Transform(carla.Location(x=t_x, y=t_y, z=t_z))
 
-						bp = self.world.get_blueprint_library().find('sensor.lidar.ray_cast_semantic')
-						lidar_transform = carla.Transform(carla.Location(x=1.6, z=1.7))
-						self.lidar_sensor = self.world.spawn_actor(bp, lidar_transform, attach_to=carlaActor)
-						self.lidar_sensor.listen(self.process_lidar_data)
+								sensor_dict = {
+									'name': sensor['name'],
+									'type': sensor['type'],
+									'rgb_buffer': [],
+									'depth_buffer': [],
+									'semantic_buffer': []
+								}
+								self.sensors.append(sensor_dict)
+
+								bp = self.world.get_blueprint_library().find('sensor.camera.rgb')
+								bp.set_attribute('image_size_x', str(VIEW_WIDTH))
+								bp.set_attribute('image_size_y', str(VIEW_HEIGHT))
+								bp.set_attribute('fov', str(VIEW_FOV))
+								rgb_cam = self.world.spawn_actor(bp, sensor_transform, attach_to=carlaActor)
+								rgb_buffer = sensor_dict['rgb_buffer']
+								rgb_cam.listen(lambda x: self.process_rgb_image(x, rgb_buffer))
+								sensor_dict['rgb_cam_obj'] = rgb_cam
+
+								bp = self.world.get_blueprint_library().find('sensor.camera.depth')
+								bp.set_attribute('image_size_x', str(VIEW_WIDTH))
+								bp.set_attribute('image_size_y', str(VIEW_HEIGHT))
+								bp.set_attribute('fov', str(VIEW_FOV))
+								depth_cam = self.world.spawn_actor(bp, sensor_transform, attach_to=carlaActor)
+								depth_buffer = sensor_dict['depth_buffer']
+								depth_cam.listen(lambda x: self.process_depth_image(x, depth_buffer))
+								sensor_dict['depth_cam_obj'] = depth_cam
+
+								# Set up calibration matrix to be used for bounding box projection
+								# calibration = np.identity(3)
+								# calibration[0, 2] = VIEW_WIDTH / 2.0
+								# calibration[1, 2] = VIEW_HEIGHT / 2.0
+								# calibration[0, 0] = calibration[1, 1] = VIEW_WIDTH / (2.0 * np.tan(VIEW_FOV * np.pi / 360.0))
+								# self.rgb_cam.calibration = calibration
+
+								bp = self.world.get_blueprint_library().find('sensor.camera.semantic_segmentation')
+								bp.set_attribute('image_size_x', str(VIEW_WIDTH))
+								bp.set_attribute('image_size_y', str(VIEW_HEIGHT))
+								semantic_cam = self.world.spawn_actor(bp, sensor_transform, attach_to=carlaActor)
+								semantic_buffer = sensor_dict['semantic_buffer']
+								semantic_cam.listen(lambda x: self.process_semantic_image(x, semantic_buffer))
+								sensor_dict['semantic_cam_obj'] = semantic_cam
+
+							elif sensor['type'] == 'lidar':
+								sensor_dict = {
+									'name': sensor['name'],
+									'type': sensor['type'],
+									'lidar_buffer': []
+								}
+								self.sensors.append(sensor_dict)
+
+								t_x, t_y, t_z = sensor['transform']
+								sensor_transform = carla.Transform(carla.Location(x=t_x, y=t_y, z=t_z))
+
+								POINTS_PER_SECOND = sensor['settings']['PPS']
+								UPPER_FOV = sensor['settings']['UPPER_FOV']
+								LOWER_FOV = sensor['settings']['LOWER_FOV']
+								RANGE = sensor['settings']['RANGE']
+								ROTATION_FREQUENCY = sensor['settings']['ROTATION_FREQUENCY']
+
+								bp = self.world.get_blueprint_library().find('sensor.lidar.ray_cast_semantic')
+								bp.set_attribute('points_per_second', str(POINTS_PER_SECOND))
+								bp.set_attribute('upper_fov', str(UPPER_FOV))
+								bp.set_attribute('lower_fov', str(LOWER_FOV))
+								bp.set_attribute('range', str(RANGE))
+								bp.set_attribute('rotation_frequency', str(ROTATION_FREQUENCY))
+								lidar_sensor = self.world.spawn_actor(bp, sensor_transform, attach_to=carlaActor)
+								lidar_sensor.listen(lambda x: self.process_lidar_data(x, sensor_dict['lidar_buffer']))
+								sensor_dict['lidar_obj'] = lidar_sensor
 
 		self.world.tick() ## allowing manualgearshift to take effect 
 
@@ -199,13 +246,38 @@ class CarlaSimulation(DrivingSimulation):
 		self.world.tick()
 
 		if self.record:
-			vehicles = self.world.get_actors().filter('vehicle.*')
+			actors = self.world.get_actors()
 
+			classified_actors = {
+				'car': [],
+				'bicycle': [],
+				'motorcycle': [],
+				'truck': [],
+				'pedestrian': []
+			}			
+
+			for a in actors:
+				if a.type_id in carModels:
+					classified_actors['car'].append(a)
+				elif a.type_id in bicycleModels:
+					classified_actors['bicycle'].append(a)
+				elif a.type_id in motorcycleModels:
+					classified_actors['motorcycle'].append(a)
+				elif a.type_id in truckModels:
+					classified_actors['truck'].append(a)
+				elif a.type_id in walkerModels:
+					classified_actors['pedestrian'].append(a)
+
+			bboxes = {}
 			curr_frame_idx = self.world.get_snapshot().frame
 
-			bounding_boxes_3d = rec_utils.BBoxUtil.get_bounding_boxes(vehicles, self.rgb_cam)
-			bounding_boxes_2d = rec_utils.BBoxUtil.get_2d_bounding_boxes(bounding_boxes_3d)
-			self.bbox_buffer.append((curr_frame_idx, bounding_boxes_2d))
+			for obj_class, obj_list in classified_actors.items():
+				# Get bounding boxes relative to RGB camera
+				bounding_boxes_3d = rec_utils.BBoxUtil.get_3d_bounding_boxes(obj_list, self.ego)
+				# Convert numpy matrices to lists
+				bboxes[obj_class] = [bbox.tolist() for bbox in bounding_boxes_3d]
+
+			self.bbox_buffer.append((curr_frame_idx, bboxes))
 
 		# Render simulation
 		if self.render:
@@ -237,91 +309,107 @@ class CarlaSimulation(DrivingSimulation):
 		)
 		return values
 
-	def process_rgb_image(self, image):
+	def process_rgb_image(self, image, buffer):
 		image.convert(cc.Raw)
-		self.rgb_frame_buffer.append(image)
+		buffer.append(image)
 
-	def process_depth_image(self, image):
+	def process_depth_image(self, image, buffer):
 		image.convert(cc.LogarithmicDepth)
-		self.depth_frame_buffer.append(image)
+		buffer.append(image)
 
-	def process_semantic_image(self, image):
-		# Save per-pixel classification for later
-		image_classes = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
-		image_classes = np.reshape(image_classes, (image.height, image.width, 4))
-		# Class is stored in red channel
-		image_classes = image_classes[:, :, 2].copy()
-
+	def process_semantic_image(self, image, buffer):
 		image.convert(cc.CityScapesPalette)
+		buffer.append(image)
 
-		self.semantic_frame_buffer.append((image, image_classes))
+	def process_lidar_data(self, lidar_data, buffer):
+		buffer.append(lidar_data)
 
-	def process_lidar_data(self, lidar_data):
-		self.lidar_data_buffer.append(lidar_data)
-
-	def save_recordings(self, save_dir, simulation_idx):
+	def save_recordings(self, save_dir):
 		if not self.record:
 			print('No recordings saved; turn on recordings for simulator to enable')
 			return
 
-		# Find frame indices for which all sensors have data (so that recordings are synchronized)
-		rgb_data = {data.frame: data for data in self.rgb_frame_buffer}
-		depth_data = {data.frame: data for data in self.depth_frame_buffer}
-		semantic_data = {data.frame: data for data, _ in self.semantic_frame_buffer}
-		frame_class_data = {data.frame: class_data for data, class_data in self.semantic_frame_buffer}
-		lidar_data = {data.frame: data for data in self.lidar_data_buffer}
-		bbox_data = {frame_idx: bboxes for frame_idx, bboxes in self.bbox_buffer}
+		print('Started saving recorded data')
 
-		common_frame_idxes = set(rgb_data.keys()).intersection(set(semantic_data.keys())).intersection(lidar_data.keys()).intersection(bbox_data.keys())
+		if not os.path.isdir(save_dir):
+			os.mkdir(save_dir)
+
+		# Find frame indices for which all sensors have data (so that recordings are synchronized)
+		common_frame_idxes = None
+		for sensor in self.sensors:
+			frame_idxes = {}
+
+			if sensor['type'] == 'rgb':
+				frame_idxes = {data.frame for data in sensor['rgb_buffer']}
+				frame_idxes = frame_idxes.intersection({data.frame for data in sensor['depth_buffer']})
+				frame_idxes = frame_idxes.intersection({data.frame for data in sensor['semantic_buffer']})
+			elif sensor['type'] == 'lidar':
+				frame_idxes = {data.frame for data in sensor['lidar_buffer']}
+
+			if common_frame_idxes is None:
+				common_frame_idxes = frame_idxes
+			else:
+				common_frame_idxes = common_frame_idxes.intersection(frame_idxes)
+
+		# Intersect with bounding box frame indices
+		common_frame_idxes = common_frame_idxes.intersection({frame_idx for frame_idx, _ in self.bbox_buffer})
+
 		common_frame_idxes = sorted(list(common_frame_idxes))
 
-		rgb_recording = rec_utils.VideoRecording()
-		depth_recording = rec_utils.VideoRecording()
-		semantic_recording = rec_utils.VideoRecording()
-		lidar_recording = rec_utils.LidarRecording()
-		bbox_recording = rec_utils.BBoxRecording()
+		for sensor in self.sensors:
+			if sensor['type'] == 'rgb':
+				rgb_recording = rec_utils.VideoRecording()
+				depth_recording = rec_utils.VideoRecording()
+				semantic_recording = rec_utils.VideoRecording()
 
-		for frame_idx in common_frame_idxes:
-			rgb_recording.add_frame(rgb_data[frame_idx])
-			depth_recording.add_frame(depth_data[frame_idx])
-			semantic_recording.add_frame(semantic_data[frame_idx])
+				rgb_data = {data.frame: data for data in sensor['rgb_buffer']}
+				depth_data = {data.frame: data for data in sensor['depth_buffer']}
+				semantic_data = {data.frame: data for data in sensor['semantic_buffer']}
 
-			classified_lidar_points = [[i.point.x, i.point.y, i.point.z, i.object_tag] for i in lidar_data[frame_idx]]
-			lidar_recording.add_frame(classified_lidar_points)
+				for frame_idx in common_frame_idxes:
+					rgb_recording.add_frame(rgb_data[frame_idx])
+					depth_recording.add_frame(depth_data[frame_idx])
+					semantic_recording.add_frame(semantic_data[frame_idx])
 
-			bbox_recording.add_frame(bbox_data[frame_idx])
+				sensor_dir = os.path.join(save_dir, sensor['name'])
+				if not os.path.isdir(sensor_dir):
+					os.mkdir(sensor_dir)
 
-		# Create necessary subdirectories
-		if not os.path.isdir(save_dir):
-			os.mkdir(save_dir)
+				rgb_filepath = os.path.join(sensor_dir, 'rgb.mp4')
+				depth_filepath = os.path.join(sensor_dir, 'depth.mp4')
+				semantic_filepath = os.path.join(sensor_dir, 'semantic.mp4')
 
-		# Create overarching directory for simulation
-		save_dir = os.path.join(save_dir, str(simulation_idx))
-		if not os.path.isdir(save_dir):
-			os.mkdir(save_dir)
+				rgb_recording.save(rgb_filepath)
+				depth_recording.save(depth_filepath)
+				semantic_recording.save(semantic_filepath)
+			elif sensor['type'] == 'lidar':
+				lidar_recording = rec_utils.LidarRecording()
 
-		cam_dir = os.path.join(save_dir, 'cam')
-		if not os.path.isdir(cam_dir):
-			os.mkdir(cam_dir)
+				lidar_data = {data.frame: data for data in sensor['lidar_buffer']}
 
-		depth_dir = os.path.join(save_dir, 'depth')
-		if not os.path.isdir(depth_dir):
-			os.mkdir(depth_dir)
+				for frame_idx in common_frame_idxes:
+					classified_lidar_points = [[i.point.x, i.point.y, i.point.z, i.object_tag] for i in lidar_data[frame_idx]]
+					lidar_recording.add_frame(classified_lidar_points)
 
-		semantic_dir = os.path.join(save_dir, 'semantic')
-		if not os.path.isdir(semantic_dir):
-			os.mkdir(semantic_dir)
+				sensor_dir = os.path.join(save_dir, sensor['name'])
+				if not os.path.isdir(sensor_dir):
+					os.mkdir(sensor_dir)
 
-		lidar_dir = os.path.join(save_dir, 'lidar')
-		if not os.path.isdir(lidar_dir):
-			os.mkdir(lidar_dir)
+				lidar_filepath = os.path.join(sensor_dir, 'lidar.json')
 
+				lidar_recording.save(lidar_filepath)
+
+		# Save bounding boxes
 		bbox_dir = os.path.join(save_dir, 'annotations')
 		if not os.path.isdir(bbox_dir):
 			os.mkdir(bbox_dir)
 
-		rgb_recording.save(cam_dir)
-		depth_recording.save(depth_dir)
-		semantic_recording.save(semantic_dir)
-		lidar_recording.save(lidar_dir)
-		bbox_recording.save(bbox_dir)
+		bbox_recording = rec_utils.BBoxRecording()
+
+		bbox_data = {frame_idx: bboxes for frame_idx, bboxes in self.bbox_buffer}
+
+		for frame_idx in common_frame_idxes:
+			bbox_recording.add_frame(bbox_data[frame_idx])
+
+		bbox_filepath = os.path.join(bbox_dir, 'bboxes.json')
+		bbox_recording.save(bbox_filepath)

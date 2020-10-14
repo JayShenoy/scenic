@@ -8,4 +8,4 @@ except ModuleNotFoundError:
 
 behavior WalkForwardBehavior():
 	while True:
-		take SetSpeedAction(0.5)
+		take SetWalkingSpeedAction(1.0)

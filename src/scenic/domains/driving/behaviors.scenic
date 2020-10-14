@@ -16,10 +16,14 @@ def distance(pos1, pos2):
     """ pos1, pos2 = (x,y) """
     return math.sqrt(math.pow(pos1[0]-pos2[0],2) + math.pow(pos1[1]-pos2[1],2))
 
-def distanceToAnyObjs(vehicle, thresholdDistance):
+def distanceToAnyObjs(vehicle, thresholdDistance, objects=None):
     """ checks whether there exists any obj
-    (1) in front of the vehicle, (2) on the same lane, (3) within thresholdDistance """
-    objects = simulation().objects
+    (1) in front of the vehicle, (2) on the same lane, (3) within thresholdDistance
+    If the objects parameter is specified, then only check the distance to those objects.
+     """
+    if objects is None:
+        # Check distance from all objects
+        objects = simulation().objects
     network = _model.network
     for obj in objects:
         if not (vehicle can see obj):

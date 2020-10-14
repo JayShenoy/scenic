@@ -51,6 +51,7 @@ intOptions.add_argument('-z', '--zoom', help='zoom expansion factor (default 1)'
 recOptions = parser.add_argument_group('simulation recording options')
 recOptions.add_argument('-r', '--record', help='enable recording of simulations',
                         action='store_true')
+recOptions.add_argument('--sensors', help='path to sensor configuration file')
 recOptions.add_argument('--recording_dir',
                         help='directory in which to save recorded data', default='./')
 
@@ -135,7 +136,8 @@ def runSimulation(scene):
         result = errors.callBeginningScenicTrace(
             lambda: simulator.simulate(scene, maxSteps=args.time, verbosity=args.verbosity,
                                        maxIterations=args.max_sims_per_scene,
-                                       save_dir=args.recording_dir)
+                                       save_dir=args.recording_dir,
+                                       sensor_config=args.sensors)
         )
     except SimulationCreationError as e:
         if args.verbosity >= 1:

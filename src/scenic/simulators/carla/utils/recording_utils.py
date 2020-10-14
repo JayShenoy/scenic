@@ -37,7 +37,7 @@ class BBoxUtil(object):
     """
 
     @staticmethod
-    def get_bounding_boxes(vehicles, camera):
+    def get_3d_bounding_boxes_projected(vehicles, camera):
         """
         Creates 3D bounding boxes based on carla vehicle list and camera.
         """
@@ -48,17 +48,41 @@ class BBoxUtil(object):
         return bounding_boxes
 
     @staticmethod
-    def get_3d_bounding_boxes(vehicles, camera):
+    def get_3d_bounding_boxes(vehicles, ego):
+        """
+        Creates 3D bounding boxes of vehicles relative to ego.
+        """
+
         bounding_boxes = []
 
         for vehicle in vehicles:
             bb_cords = BBoxUtil._create_bb_points(vehicle)
-            cords_x_y_z = BBoxUtil._vehicle_to_sensor(bb_cords, vehicle, camera)[:3, :]
-            cords_y_minus_z_x = np.concatenate([cords_x_y_z[1, :], -cords_x_y_z[2, :], cords_x_y_z[0, :]])
-            bbox = np.transpose(np.dot(camera.calibration, cords_y_minus_z_x))
+            bbox = BBoxUtil._vehicle_to_ego(bb_cords, vehicle, ego)[:3, :]
+            bbox = np.transpose(bbox)
             bounding_boxes.append(bbox)
 
         return bounding_boxes
+
+    @staticmethod
+    def _vehicle_to_ego(cords, vehicle, ego):
+        """
+        Transforms coordinates of a vehicle bounding box to ego.
+        """
+
+        world_cord = BBoxUtil._vehicle_to_world(cords, vehicle)
+        ego_cord = BBoxUtil._world_to_ego(world_cord, ego)
+        return ego_cord
+
+    @staticmethod
+    def _world_to_ego(cords, ego):
+        """
+        Transforms world coordinates to ego.
+        """
+
+        ego_world_matrix = BBoxUtil.get_matrix(ego.carlaActor.get_transform())
+        world_ego_matrix = np.linalg.inv(ego_world_matrix)
+        ego_cords = np.dot(ego_world_matrix, cords)
+        return ego_cords
 
     @staticmethod
     def get_2d_bounding_boxes(bounding_boxes_3d):
@@ -249,8 +273,7 @@ class BBoxRecording:
 
         return BBoxRecording(json_data)
 
-    def save(self, save_dir):
-        filepath = os.path.join(save_dir, 'bboxes.json')
+    def save(self, filepath):
         with open(filepath, 'w') as f:
             json.dump(self.frames, f)
 
@@ -283,19 +306,17 @@ class VideoRecording:
 
         return VideoRecording(frames)
 
-    def save(self, save_dir):
+    def save(self, filepath):
         if len(self.frames) == 0:
             print('Tried to save video, but no frames have been recorded')
             return
 
         frame_height, frame_width, _ = self.frames[0].shape
 
-        filepath = os.path.join(save_dir, 'vid.mp4')
-
         out = cv2.VideoWriter(
             filepath,
             cv2.VideoWriter_fourcc(*'mp4v'),
-            30.0,
+            15.0,
             (frame_width, frame_height),
             True
         )
@@ -324,7 +345,6 @@ class LidarRecording:
 
         return LidarRecording(json_data)
 
-    def save(self, save_dir):
-        filepath = os.path.join(save_dir, 'lidar.json')
+    def save(self, filepath):
         with open(filepath, 'w') as f:
             json.dump(self.frames, f)

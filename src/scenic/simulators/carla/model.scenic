@@ -24,6 +24,7 @@ from scenic.domains.driving.model import *
 import scenic.simulators.carla.blueprints as blueprints
 from scenic.simulators.carla.behaviors import *
 from scenic.simulators.utils.colors import Color
+import scenic.simulators.carla.utils.utils as utils
 
 try:
     from scenic.simulators.carla.simulator import CarlaSimulator    # for use in scenarios
@@ -71,7 +72,7 @@ class CarlaActor(DrivingObject):
         self.carlaActor.set_location(utils.scenicToCarlaLocation(pos, elevation))
 
     def setVelocity(self, vel):
-        self.carlaActor.set_velocity(utils.scenicToCarlaVector3D(*vel))
+        self.carlaActor.set_target_velocity(utils.scenicToCarlaVector3D(*vel))
 
 
 class Vehicle(Vehicle, CarlaActor, Steers):
