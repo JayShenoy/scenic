@@ -146,4 +146,21 @@ draw_bbox_3d(frame['bboxes'], sensor_config.get('cam'), frame['cam']['rgb'], 'fr
 }
 ```
 
-The API also includes utility functions to draw 2D and 3D bounding boxes onto any camera of choice, as well as to output a labeled point cloud that can be opened with software such as CloudCompare:
+#### class SensorConfig
+* def get(self, sensor_name)
+    * Returns a dictionary object representing the sensor with name `sensor_name`. This sensor dictionary object should be used when working with the helper functions for drawing bounding boxes.
+
+The API includes utility functions to draw 2D and 3D bounding boxes onto any camera of choice, as well as to output a labeled point cloud that can be opened with software such as CloudCompare:
+
+* def draw_bbox_2d(bboxes, sensor, img, output_filepath)
+    * `bboxes`: a list of 3D bounding boxes as returned by `SimulationData.get_frame()`
+    * `sensor`: a sensor dictionary object as described above
+    * `img`: numpy array of the image frame to draw on
+    * `output_filepath`: where to output the final image
+    * This function draws 2D bounding boxes onto an image captured by a particular sensor
+
+The function for drawing 3D bounding boxes is similar. For outputting labeled point clouds, we have the following function:
+
+* def save_point_cloud(lidar_points, output_filepath)
+    * `lidar_points`: list of lidar points as returned by `SimulationData.get_frame()`
+    * `output_filepath`: where to output the point cloud (should have extension `.asc`)
