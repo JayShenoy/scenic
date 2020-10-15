@@ -90,3 +90,37 @@ Once you've either downloaded our provided dataset or generated one of your own,
 ```
 from scenic.simulators.carla.recording import *
 ```
+
+Load the sensor configuration file into a `SensorConfig` object:
+
+```
+sensor_config = SensorConfig('/path/to/sensor/config/file')
+```
+
+Load the generated dataset. The dataset path here is the top-level directory (for instance, Town03 in our dataset).
+
+```
+data = DataAPI('/path/to/dataset/directory', sensor_config)
+```
+
+Now you may browse the data as you please. The following is a complete example of drawing 3D bounding boxes onto a frame from a selected simulation:
+
+```
+from scenic.simulators.carla.recording import *
+
+DATA_DIR = '/data/scenic_data_collection/Town03'
+SENSOR_CONFIG_FILE = 'sensor_config.json'
+
+sensor_config = SensorConfig(SENSOR_CONFIG_FILE)
+
+data = DataAPI(DATA_DIR, sensor_config)
+
+sims = data.get_simulations()
+sims = list(sims.values())
+sim = sims[0]
+
+frame = sim.get_frame(10)
+draw_bbox_3d(frame['bboxes'], sensor_config.get('cam'), frame['cam']['rgb'], 'frame.jpg')
+```
+
+### API Documentation
