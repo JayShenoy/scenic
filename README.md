@@ -1,24 +1,10 @@
-# Scenic
-
-[![Documentation Status](https://readthedocs.org/projects/scenic-lang/badge/?version=latest)](https://scenic-lang.readthedocs.io/en/latest/?badge=latest)
-[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-
-A compiler and scene generator for the Scenic scenario description language.
-Please see the [documentation](https://scenic-lang.readthedocs.io/) for installation instructions, as well as tutorials and other information about the Scenic language, its implementation, and its interfaces to various simulators.
-
-For a description of the language and some of its applications, see [our PLDI 2019 paper](https://arxiv.org/abs/1809.09310) (*note:* the syntax of Scenic has changed slightly since then).
-Scenic was designed and implemented by Daniel J. Fremont, Tommaso Dreossi, Shromona Ghosh, Edward Kim, Xiangyu Yue, Alberto L. Sangiovanni-Vincentelli, and Sanjit A. Seshia.
-
-If you have any problems using Scenic, please submit an issue to [our GitHub repository](https://github.com/BerkeleyLearnVerify/Scenic) or contact Daniel at <dfremont@ucsc.edu>.
-
-The repository is organized as follows:
-
-* the _src/scenic_ directory contains the package proper;
-* the _examples_ directory has many examples of Scenic programs;
-* the _docs_ directory contains the sources for the documentation;
-* the _tests_ directory contains tests for the Scenic compiler.
-
 # Scenic Data Generation Platform
+
+## Synthetic Dataset
+
+Our synthetic dataset, containing hundreds of simulations of Scenic programs, can be found [at this link](https://drive.google.com/drive/folders/18SrqL2q7PyMfaS0oKAFqoc6hVasXS20I?usp=sharing).
+
+If you wish to generate your own datasets, please follow the setup instructions below. If you're just looking to interact with our dataset above, feel free to skip to the API section.
 
 ## Setup
 
@@ -35,8 +21,32 @@ The repository is organized as follows:
     * Save and exit “~/.bashrc” and restart the terminal for the changes to take effect. To confirm that the package is on the PYTHONPATH, try the command “echo $PYTHONPATH”
 
 ### Installing Scenic
-* Clone the current repository.
+* In a new terminal window, clone the current repository.
 * In the command line, enter the repository and switch to the branch “dynamics2-recording”
 * Run `poetry install` followed by `poetry shell`
 * You’re now ready to run dynamic Scenic scripts! Here’s an example: `python -m scenic -S --time 200 --count 3 -m scenic.simulators.carla.model /path/to/scenic/script`
     * This creates 3 simulations of the specified Scenic script, each of which runs for 200 time steps. Some example Scenic scripts are located in “examples/carla”
+
+## Dataset Generation
+
+To generate a synthetic dataset using Scenic, you need two things: a scenario configuration file and a sensor configuration file.
+
+### Scenario Configuration
+
+This file lets you configure which Scenic programs to simulate (`scripts`), how many times to simulate each program (`simulations_per_scenario`), and how many steps to run each simulation for (`time_per_simulation`), and where to output the generated data (`output_dir`).
+
+A sample scenario configuration file, which must be saved in the JSON format, is shown below. Feel free to change the list of scripts to reference any Scenic programs on your machine.
+
+```
+{
+   "output_dir": "/path/to/output/dir",
+   "simulations_per_scenario": 3,
+   "time_per_simulation": 300,
+   "scripts": [
+      "/path/to/scenario1",
+      "/path/to/scenario2"
+    ]
+}
+```
+
+Scenic was designed and implemented by Daniel J. Fremont, Tommaso Dreossi, Shromona Ghosh, Edward Kim, Xiangyu Yue, Alberto L. Sangiovanni-Vincentelli, and Sanjit A. Seshia.
