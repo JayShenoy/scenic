@@ -103,7 +103,7 @@ Load the generated dataset. The dataset path here is the top-level directory (fo
 data = DataAPI('/path/to/dataset/directory', sensor_config)
 ```
 
-Now you may browse the data as you please. The following is a complete example of drawing 3D bounding boxes onto a frame from a selected simulation:
+Now you may browse the data as you please. The following example demonstrates how to draw 3D bounding boxes onto a frame selected from a particular simulation:
 
 ```
 from scenic.simulators.carla.recording import *
@@ -124,3 +124,26 @@ draw_bbox_3d(frame['bboxes'], sensor_config.get('cam'), frame['cam']['rgb'], 'fr
 ```
 
 ### API Documentation
+
+#### class DataAPI
+* def get_simulations(self)
+    * Returns simulation data as a dictionary, with keys as the simulation name and values as `SimulationData` objects.
+
+#### class SimulationData
+* def get_frame(self, frame_idx)
+    * Returns all sensor data recorded at a particular frame index (time step). For example, if we recorded with an RGB camera named "cam" and a lidar sensor named "lidar", then this function would return:
+```
+{
+	"bboxes": [list of 3D bounding boxes],
+	"cam": {
+		"rgb": image as numpy array,
+		"depth": image as numpy array,
+		"semantic": image as numpy array
+	},
+	"lidar": {
+		"lidar": [list of lidar points]
+	}
+}
+```
+
+The API also includes utility functions to draw 2D and 3D bounding boxes onto any camera of choice, as well as to output a labeled point cloud that can be opened with software such as CloudCompare:
