@@ -259,7 +259,7 @@ class BBoxRecording:
     def __init__(self, frames=None):
         self.frames = []
         if frames is not None:
-            self.frames = bounding_boxes
+            self.frames = frames
 
     def add_frame(self, bounding_boxes):
         self.frames.append(bounding_boxes)
@@ -268,7 +268,7 @@ class BBoxRecording:
         return self.frames[frame_idx]
 
     def import_from_file(filepath):
-        with open(json_filepath, 'r') as f:
+        with open(filepath, 'r') as f:
             json_data = json.load(f)
 
         return BBoxRecording(json_data)
