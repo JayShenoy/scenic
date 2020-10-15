@@ -33,15 +33,15 @@ To generate a synthetic dataset using Scenic, you need two things: a scenario co
 
 ### Scenario Configuration
 
-This file lets you configure which Scenic programs to simulate (`scripts`), how many times to simulate each program (`simulations_per_scenario`), and how many steps to run each simulation for (`time_per_simulation`), and where to output the generated data (`output_dir`).
+This file lets you configure which Scenic programs to simulate, how many times to simulate each program, how many steps to run each simulation for, and where to output the generated data.
 
 A sample scenario configuration file, which must be saved in the JSON format, is shown below. Feel free to change the list of scripts to reference any Scenic programs on your machine.
 
 ```
 {
-   "output_dir": "/path/to/output/dir",
-   "simulations_per_scenario": 3,
-   "time_per_simulation": 300,
+   "output_dir": "/path/to/output/dir", // dataset output directory
+   "simulations_per_scenario": 3, // number of simulations per Scenic program (script)
+   "time_per_simulation": 300, // time steps per simulation
    "scripts": [
       "/path/to/scenario1",
       "/path/to/scenario2"
@@ -49,4 +49,44 @@ A sample scenario configuration file, which must be saved in the JSON format, is
 }
 ```
 
-Scenic was designed and implemented by Daniel J. Fremont, Tommaso Dreossi, Shromona Ghosh, Edward Kim, Xiangyu Yue, Alberto L. Sangiovanni-Vincentelli, and Sanjit A. Seshia.
+### Sensor Configuration
+
+This file is another JSON file that lets you configure the number, placement, and type of sensors with which to record. Right now, RGB video cameras and lidar sensors are supported (with ground-truth annotations). An example configuration file is as follows:
+
+```
+{
+   [
+	{
+		"name": "cam", // each sensor must have an associated unique name
+		"type": "rgb",
+		"transform": [0, 0, 2.4], // sensor xyz coordinates with respect to ego vehicle
+		"settings": {
+			"VIEW_WIDTH": 1280, // horizontal resolution in pixels
+			"VIEW_HEIGHT": 720, // vertical resolution in pixels
+			"VIEW_FOV": 90 // horizontal field of view
+		}
+	},
+	{
+		"name": "lidar",
+		"type": "lidar",
+		"transform": [0, 0, 2.4], // sensor xyz coordinates with respect to ego vehicle
+		"settings": {
+			"PPS": 400000, // number of points to record per second
+			"UPPER_FOV": 15.0,
+			"LOWER_FOV": -25.0, // combined 40 degree field of view
+			"RANGE": 40, // range of sensor in meters
+			"ROTATION_FREQUENCY": 18.0 // frequency of rotation per second (should be close to simulation fps)
+		}
+	}
+]
+```
+
+In fact, this was the exact sensor configuration file that we used to generate our synthetic dataset.
+
+## API
+
+Once you've either downloaded our provided dataset or generated one of your own, you can browse the data using our API:
+
+```
+from scenic.simulators.carla.recording import *
+```
