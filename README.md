@@ -83,6 +83,14 @@ This file is another JSON file that lets you configure the number, placement, an
 
 In fact, this was the exact sensor configuration file that we used to generate our synthetic dataset.
 
+Now, to actually generate data using the configurations above, simply run:
+
+```
+python -m scenic.simulators.carla.recording --scenarios /path/to/scenario/config --sensors /path/to/sensor/config
+```
+
+Remember to enter `poetry shell` before running this command so that Scenic is properly set up as a module. Your dataset is on its way!
+
 ## API
 
 Once you've either downloaded our provided dataset or generated one of your own, you can browse the data using our API:
