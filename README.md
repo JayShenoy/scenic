@@ -97,7 +97,7 @@ Load the sensor configuration file into a `SensorConfig` object:
 sensor_config = SensorConfig('/path/to/sensor/config/file')
 ```
 
-Load the generated dataset. The dataset path here is the top-level directory (for instance, Town03 in our dataset).
+Load the generated dataset. The dataset directory here is the same as the "output_dir" specified in the scenario configuration file. If you're using our provided dataset, the dataset path will be the full directory path of "Town03", "Town05", "Town10", or "dense".
 
 ```
 data = DataAPI('/path/to/dataset/directory', sensor_config)
