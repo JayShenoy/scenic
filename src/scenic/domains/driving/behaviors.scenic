@@ -89,8 +89,9 @@ behavior FollowLaneBehavior(target_speed = 10, laneToFollow=None, is_oppositeTra
     e.g. do FollowLaneBehavior() until ...
 
     :param target_speed: Its unit is in m/s. By default, it is set to 10 m/s
-    :param laneToFollow: If the lane to follow is different from the lane that the vehicle is on, this parameter can be used to specify that lane. 
+    :param laneToFollow: If the lane to follow is different from the lane that the vehicle is on, this parameter can be used to specify that lane.
     By default, this variable will be set to None, which means that the vehicle will follow the lane that it is currently on.
+    :param desired_maneuver: Desired maneuver to take at intersections. Defaults to the straight maneuver.
     """
 
     past_steer_angle = 0
@@ -145,10 +146,10 @@ behavior FollowLaneBehavior(target_speed = 10, laneToFollow=None, is_oppositeTra
         if not entering_intersection and (distance from self.position to nearby_intersection) < TRIGGER_DISTANCE_TO_SLOWDOWN:
             entering_intersection = True
             intersection_passed = False
-            straight_manuevers = filter(lambda i: i.type == desired_maneuver, current_lane.maneuvers)
+            desired_maneuvers = filter(lambda i: i.type == desired_maneuver, current_lane.maneuvers)
 
-            if len(straight_manuevers) > 0:
-                select_maneuver = Uniform(*straight_manuevers)
+            if len(desired_maneuvers) > 0:
+                select_maneuver = Uniform(*desired_maneuvers)
             else:
                 if len(current_lane.maneuvers) > 0:
                     select_maneuver = Uniform(*current_lane.maneuvers)
