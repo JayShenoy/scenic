@@ -172,3 +172,5 @@ The function for drawing 3D bounding boxes is similar. For outputting labeled po
 * def save_point_cloud(lidar_points, output_filepath)
     * `lidar_points`: list of lidar points as returned by `SimulationData.get_frame()`
     * `output_filepath`: where to output the point cloud (should have extension `.asc`)
+
+Ground-truth annotations contain semantic labels provided by CARLA, a complete description of which can be found [here](https://carla.readthedocs.io/en/latest/ref_sensors/#semantic-segmentation-camera) (scroll to the table of semantic tags).
