@@ -140,13 +140,18 @@ class CarlaSimulation(DrivingSimulation):
 						self.sensors = []
 
 						for sensor in sensors:
+							t_x, t_y, t_z = sensor['transform']['location']
+							loc = carla.Location(x=t_x, y=t_y, z=t_z)
+							rot = carla.Rotation()
+							if 'rotation' in sensor['transform']:
+								yaw, pitch, roll = sensor['transform']['rotation']
+								rot = carla.Rotation(yaw=yaw, pitch=pitch, roll=roll)
+							sensor_transform = carla.Transform(loc, rot)
+
 							if sensor['type'] == 'rgb':
 								VIEW_WIDTH = sensor['settings']['VIEW_WIDTH']
 								VIEW_HEIGHT = sensor['settings']['VIEW_HEIGHT']
 								VIEW_FOV = sensor['settings']['VIEW_FOV']
-
-								t_x, t_y, t_z = sensor['transform']
-								sensor_transform = carla.Transform(carla.Location(x=t_x, y=t_y, z=t_z))
 
 								sensor_dict = {
 									'name': sensor['name'],
@@ -190,9 +195,6 @@ class CarlaSimulation(DrivingSimulation):
 									'lidar_buffer': []
 								}
 								self.sensors.append(sensor_dict)
-
-								t_x, t_y, t_z = sensor['transform']
-								sensor_transform = carla.Transform(carla.Location(x=t_x, y=t_y, z=t_z))
 
 								POINTS_PER_SECOND = sensor['settings']['PPS']
 								UPPER_FOV = sensor['settings']['UPPER_FOV']
