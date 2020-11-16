@@ -15,7 +15,216 @@ from scenic.core.lazy_eval import (LazilyEvaluable,
 from scenic.core.utils import argsToString, areEquivalent, cached, sqrt2
 from scenic.core.errors import RuntimeParseError
 
-## Misc
+def smt_add(var1, var2):
+	assert(isinstance(var1, str))
+	assert(isinstance(var2, str))
+	return "(+ "+var1+" "+var2+")"
+
+def smt_subtract(var1, var2):
+	assert(isinstance(var1, str))
+	assert(isinstance(var2, str))
+	return "(- "+var1+" "+var2+")"
+
+def smt_multiply(var1, var2):
+	assert(isinstance(var1, str))
+	assert(isinstance(var2, str))
+	return "(* "+var1+" "+var2+")"
+
+def smt_divide(var1, var2):
+	assert(isinstance(var1, str))
+	assert(isinstance(var2, str))
+	return "(div "+var1+" "+var2+")"
+
+def smt_and(var1, var2):
+	assert(isinstance(var1, str))
+	assert(isinstance(var2, str))
+	return "(and "+var1+" "+var2+")"
+
+def smt_or(var1, var2):
+	assert(isinstance(var1, str))
+	assert(isinstance(var2, str))
+	return "(or "+var1+" "+var2+")"
+
+def smt_equal(var1, var2):
+	assert(isinstance(var1, str))
+	assert(isinstance(var2, str))
+	return "(= "+var1+" "+var2+")"
+
+def smt_mod(var1, var2):
+	assert(isinstance(var1, str))
+	assert(isinstance(var2, str))
+	return "(mod "+var1+" "+var2+")"
+
+def smt_lessThan(var1, var2):
+	assert(isinstance(var1, str))
+	assert(isinstance(var2, str))
+	return "(< "+var1+" "+var2+")"
+
+def smt_lessThanEq(var1, var2):
+	assert(isinstance(var1, str))
+	assert(isinstance(var2, str))
+	return "(<= "+var1+" "+var2+")"
+
+def smt_ite(predicate, output1, output2):
+	assert(isinstance(predicate, str))
+	assert(isinstance(output1, str))
+	assert(isinstance(output2, str))
+	return "(ite "+predicate+" "+output1+" "+output2+")"
+
+def smt_assert(operation_type, var1, var2=None):
+	assert(isinstance(var1, str))
+	assert(isinstance(var2, str) or var2==None)
+
+	if operation_type == "add":
+		op_encoding = smt_add(var1, var2)
+	elif operation_type == "subtract":
+		op_encoding = smt_subtract(var1, var2)
+	elif operation_type == "multiply":
+		op_encoding = smt_multiply(var1, var2)
+	elif operation_type == "divide":
+		op_encoding = smt_divide(var1, var2)
+	elif operation_type == "equal":
+		op_encoding = smt_equal(var1, var2)
+	elif operation_type == "and":
+		op_encoding = smt_and(var1, var2)
+	elif operation_type == "mod":
+		op_encoding = smt_mod(var1, var2)
+	elif operation_type == "<=":
+		op_encoding = smt_lessThanEq(var1, var2)
+	elif operation_type == "<":
+		op_encoding = smt_lessThan(var1, var2)
+	elif operation_type == None:
+		op_encoding = var1
+	else:
+		print("SMT_ASSERT() UNIDENTIFIED OPERATION")
+		raise NotImplementedError
+
+	return "(assert "+ op_encoding +")"
+
+def vector_operation_smt(vector1, operation, vector2):
+	""" vector1, vector2 := (x, y) from triangle := shapely.geometry.polygon.Polygon
+	x, y are floats"""
+	
+	x1 = str(vector1[0])
+	y1 = str(vector1[1])
+
+	if isinstance(vector2, tuple):
+		x2 = str(vector2[0])
+		y2 = str(vector2[1])
+	else: # scalar operation to a vector case
+		assert(isinstance(vector2, str))
+		x2 = y2 = vector2
+
+	if operation == "add":	
+		x = smt_add(x1, x2)
+		y = smt_add(y1, y2)
+	elif operation == "subtract":
+		x = smt_subtract(x1, x2)
+		y = smt_subtract(y1, y2)
+	elif operation == "multiply":
+		x = smt_multiply(x1, x2)
+		y = smt_multiply(y1, y2) 
+	elif operation == "equal":
+		x = smt_equal(x1, x2)
+		y = smt_equal(y1, y2)
+	else:
+		print("vector_operation_smt() UNIDENTIFIED OPERATION")
+		raise NotImplementedError
+
+	return (x, y)
+
+def normalizeAngle_SMT(original_angle):
+	angle = findVariableName(cached_variables, smt_file_path, cached_variables['variables'], 'angle')
+	ite1 = smt_assert("equal", angle , smt_ite(smt_lessThan("0", original_angle), \
+		smt_mod(original_angle, "6.2832"), original_angle))
+	ite2 = smt_assert("equal", angle , smt_ite(smt_lessThan(original_angle, "0"), \
+		smt_mod(original_angle, "-6.2832"), original_angle))
+
+	writeSMTtoFile(smt_file_path, ite1)
+	writeSMTtoFile(smt_file_path, ite2)
+
+	theta = findVariableName(cached_variables, smt_file_path, cached_variables['variables'], 'theta')
+	theta_encoding = smt_assert("equal", theta, angle)
+	angleTo_encoding1 = smt_assert("equal", theta, smt_ite(smt_lessThanEq("3.1416",angle), smt_subtract(angle,"6.2832"), angle))
+	angleTo_encoding2 = smt_assert("equal", theta, smt_ite(smt_lessThanEq(angle, "-3.1416"), smt_add(angle,"6.2832"), angle))
+
+	writeSMTtoFile(smt_file_path, theta_encoding)
+	writeSMTtoFile(smt_file_path, angleTo_encoding1)
+	writeSMTtoFile(smt_file_path, angleTo_encoding2)
+	return theta
+
+def findVariableName(cached_variables, smt_file_path, variable_list, class_name, class_type=None):
+	""" for smt encoding, to avoid duplicate naming, add a number at then end for differentiation 
+		returns the next available name """
+
+	cached_var = [variable for variable in variable_list if variable.startswith(class_name)]
+	var_name = class_name+str(len(cached_var)+1) 
+
+	if class_type == None:
+		declare_var= "(declare-fun "+var_name+" () Real)\n"
+	else:
+		declare_var= "(declare-fun "+var_name+" () "+class_type+"\n)"
+
+	writeSMTtoFile(smt_file_path, declare_var)
+	cached_variables['variables'].append(var_name)
+	return var_name
+
+def checkAndEncodeSMT(smt_file_path, cached_variables, obj, debug=False):
+	if isinstance(obj, Samplable):
+		# print("checkAndEncodeSMT obj: ", obj)
+		print("obj type: ", type(obj))
+		return obj.encodeToSMT(smt_file_path, cached_variables, debug=debug)
+	elif isinstance(obj, int) or isinstance(obj, float):
+		return str(obj)
+	elif isinstance(obj, str):
+		# this covers case in regions.py, PointInRegionDist's encodeToSMT where
+		# a Vector is instantiated with string variable names
+		return obj
+	else:
+		print("checkAndEncodeSMT UNIDENTIFIED CASE DETECTED")
+		raise NotImplementedError
+	return None
+
+def writeSMTtoFile(smt_file_path, smt_encoding):
+	if isinstance(smt_encoding, str):
+		with open(smt_file_path, "a+") as smt_file:
+			smt_file.write(smt_encoding+"\n")
+
+	elif isinstance(smt_encoding, tuple) and len(smt_encoding) == 2:
+		with open(smt_file_path, "a+") as smt_file:
+			smt_file.write(smt_encoding[0]+"\n")
+			smt_file.write(smt_encoding[1]+"\n")
+	else :
+		raise NotImplementedError
+
+	return None
+
+def cacheVarName(cached_variables, obj, var_names):
+	""" caches variable names.
+	type : var_names := tuple """
+
+	# if obj in cached_variables.keys():
+	# 	return cached_variables[obj]
+	if not isinstance(var_names, tuple):
+		var_names = (var_names)
+
+	key_exists = False
+	for key in list(cached_variables.keys()):
+		if obj is key:
+			key_exists = True
+
+	if key_exists:
+		return cached_variables[obj]
+
+	for var in var_names:
+		if var not in cached_variables['variables']:
+			cached_variables['variables'].append(var)
+
+	if len(var_names) == 1:
+		var_names = var_names[0]
+	cached_variables[obj] = var_names
+	# cached_variables.update({obj: var_names})
+	return var_names
 
 def dependencies(thing):
 	"""Dependencies which must be sampled before this value."""
@@ -111,6 +320,14 @@ class Samplable(LazilyEvaluable):
 			if child not in subsamples:
 				subsamples[child] = child.sample(subsamples)
 		return self._conditioned.sampleGiven(subsamples)
+
+	def translateToSMT(parent, subsamples=None):
+		if subsamples in None:
+			subsamples = DefaultIdentityDict()
+		for child in parent._conditioned._dependencies:
+			if child not in subsamples:
+				subsamples[child] = translateToSMT(child, subsamples)
+		return parent._conditioned.sampleGiven(subsamples)
 
 	def sampleGiven(self, value):
 		"""Sample this value, given values for all its dependencies.
@@ -311,6 +528,33 @@ class FunctionDistribution(Distribution):
 		self.kwargs = kwargs
 		self.support = support
 
+	def encodeToSMT(self, smt_file_path, cached_variables, debug=False):
+		"""to avoid duplicate variable names, check for variable existence in cached_variables dict:
+		   cached_variables : key = obj, value = variable_name / key = 'variables', value = list(cached variables so far)
+		   encodeToSMT() must return 'cached_variables' dictionary
+		"""
+		# import scenic.core.geometry as geometry
+		raise NotImplementedError
+
+		if debug:
+			writeSMTtoFile(smt_file_path, "FunctionDistribution")
+
+		if self in cached_variables.keys():
+			if debug:
+				writeSMTtoFile(smt_file_path, "FunctionDistribution already exists in cached_variables dict")
+			return cached_variables[obj]
+
+		for arg in self.arguments:
+			if isinstance(arg, Samplable):
+				arg.encodeToSMT(smt_file_path, cached_variables, debug=debug)
+		for kwarg in self.kwargs:
+			if isinstance(kwarg, Samplable):
+				kwarg.encodeToSMT(smt_file_path, cached_variables, debug=debug)
+
+		# cached_variables = self.object.encodeToSMT(smt_file_path, cached_variables, self)
+
+		return cached_variables
+
 	def sampleGiven(self, value):
 		args = []
 		for arg in self.arguments:
@@ -418,6 +662,41 @@ class MethodDistribution(Distribution):
 		self.arguments = args
 		self.kwargs = kwargs
 
+	def encodeToSMT(self, smt_file_path, cached_variables, debug=False):
+		"""to avoid duplicate variable names, check for variable existence in cached_variables dict:
+		   cached_variables : key = obj, value = variable_name / key = 'variables', value = list(cached variables so far)
+		   encodeToSMT() must return 'cached_variables' dictionary
+		"""
+		# import scenic.core.geometry as geometry
+		if debug:
+			writeSMTtoFile(smt_file_path, "MethodDistribution")
+			writeSMTtoFile(smt_file_path, "method: "+str(self.method))
+			writeSMTtoFile(smt_file_path, "type(method): "+str(type(self.method)))
+			# writeSMTtoFile(smt_file_path, "object: "+str(self.object))
+			writeSMTtoFile(smt_file_path, "type(object): "+str(type(self.object)))
+			# writeSMTtoFile(smt_file_path, "arguments: "+str(self.arguments))
+			for arg in self.arguments:
+				writeSMTtoFile(smt_file_path, "type(argument): "+str(type(arg)))
+			writeSMTtoFile(smt_file_path, "self.kwargs: "+str(self.kwargs))
+
+
+		if self in cached_variables.keys():
+			if debug:
+				writeSMTtoFile(smt_file_path, "MethodDistribution already exists in cached_variables dict")
+			return cached_variables[self]
+		
+		for arg in self.arguments:
+			if isinstance(arg, Samplable):
+				arg.encodeToSMT(smt_file_path, cached_variables, debug=debug)
+		
+		for kwarg in self.kwargs:
+			if isinstance(kwarg, Samplable):
+				kwarg.encodeToSMT(smt_file_path, cached_variables, debug=debug)
+
+		# create cached_variables[self]
+		output = self.object.encodeToSMT(smt_file_path, cached_variables, self, debug=debug)
+		return cacheVarName(cached_variables, self, output)
+
 	def sampleGiven(self, value):
 		args = []
 		for arg in self.arguments:
@@ -472,6 +751,56 @@ class AttributeDistribution(Distribution):
 		self.attribute = attribute
 		self.object = obj
 
+	def encodeToSMT(self, smt_file_path, cached_variables, debug=False):
+		if debug:
+			writeSMTtoFile(smt_file_path, "AttributeDistribution")
+			writeSMTtoFile(smt_file_path, "attribute: " + str(self.attribute))
+			writeSMTtoFile(smt_file_path, "type(attribute): " + str(type(self.attribute)))
+			# writeSMTtoFile(smt_file_path, "object: " + str(self.object))
+			writeSMTtoFile(smt_file_path, "type(object): " + str(type(self.object)))
+
+		if self in cached_variables.keys():
+			if debug:
+				writeSMTtoFile(smt_file_path, "AttributeDistribution exists in cached_variables dict")
+			return cached_variables[self]
+
+		import scenic.core.vectors as vectors
+		import scenic.core.type_support as type_support
+		if debug:
+			print("AttributeDistribution's type(object): ", type(self.object))
+
+
+		if isinstance(self.object, vectors.VectorOperatorDistribution):
+			(x,y) = self.object.encodeToSMT(smt_file_path, cached_variables, debug = debug)
+			if self.attribute == 'x':
+				return cacheVarName(cached_variables, self, x)
+			elif self.attribute == 'y':
+				return cacheVarName(cached_variables, self, y)
+			else:
+				raise NotImplementedError
+
+		elif isinstance(self.object, type_support.TypecheckedDistribution):
+			distribution = self.object.dist
+			if debug:
+				writeSMTtoFile(smt_file_path, "distribution: " + str(distribution))
+				writeSMTtoFile(smt_file_path, "type(distribution): " + str(type(distribution)))
+
+			output = distribution.encodeToSMT(smt_file_path, cached_variables, debug=debug)
+			if self.attribute == 'intersect':
+				return cacheVarName(cached_variables, self, output)
+			else:
+				raise NotImplementedError
+
+		elif isinstance(self.object, Options):
+			output = self.object.encodeToSMT(smt_file_path, cached_variables, debug=debug)
+			return cacheVarName(cached_variables, self, output)
+
+		else:
+			print("AttributeDistribution's type(object): ", type(self.object))
+			raise NotImplementedError
+
+		return None
+
 	def sampleGiven(self, value):
 		obj = value[self.object]
 		return getattr(obj, self.attribute)
@@ -520,6 +849,91 @@ class OperatorDistribution(Distribution):
 		self.object = obj
 		self.operands = operands
 
+	def encodeToSMT(self, smt_file_path, cached_variables, debug=False):
+		"""to avoid duplicate variable names, check for variable existence in cached_variables dict:
+		   cached_variables : key = obj, value = variable_name / key = 'variables', value = list(cached variables so far)
+		   encodeToSMT() must return 'cached_variables' dictionary
+		"""
+		if debug:
+			writeSMTtoFile(smt_file_path, "OperatorDistribution")
+			writeSMTtoFile(smt_file_path, "operator: "+str(self.operator))
+			writeSMTtoFile(smt_file_path, "type(operator): "+str(type(self.operator)))
+			# writeSMTtoFile(smt_file_path, "object: "+str(self.object))
+			writeSMTtoFile(smt_file_path, "type(object): "+str(type(self.object)))
+			# writeSMTtoFile(smt_file_path, "operands: "+str(self.operands))
+			for op in self.operands:
+				writeSMTtoFile(smt_file_path, "type(operand): "+str(type(op)))
+
+		if self in cached_variables.keys():
+			if debug:
+				writeSMTtoFile(smt_file_path, "OperatorDistribution already exists in cached_variables dict")
+			return cached_variables[self]
+
+		var_name = self.object.encodeToSMT(smt_file_path, cached_variables, debug=debug)
+
+		assert(len(self.operands) < 2)
+		operand = self.operands[0]._conditioned
+		if isinstance(operand, Samplable):
+			operand_smt = operand.encodeToSMT(smt_file_path, cached_variables, debug=debug)
+		elif isinstance(operand, int) or isinstance(operand, float):
+			operand_smt = str(self.operands[0])
+		else:
+			raise NotImplementedError
+
+		if self.operator in ['__add__', '__radd__' , '__sub__', '__rsub__', '__truediv__', '__rtruediv__', '__mul__', '__rmul__',\
+			'__floordiv__', '__rfloordiv__','__mod__', '__rmod__','__divmod__', '__rdivmod__','__pow__', '__rpow__']:
+
+			var_name = findVariableName(cached_variables, smt_file_path, cached_variables['variables'], 'opdist')
+
+			if self.operator == '__add__' or self.operator == '__radd__':
+				summation = smt_add(cached_variables[self.object], operand_smt)
+				smt_encoding = smt_assert("equal", var_name, summation)
+
+			elif self.operator == '__mul__' or self.operator == '__rmul__':
+				multiplication = smt_multiply(cached_variables[self.object], operand_smt)
+				smt_encoding = smt_assert("equal", var_name, multiplication)
+
+			elif self.operator == '__sub__':
+				subtraction = smt_subtract(cached_variables[self.object], operand_smt)
+				smt_encoding = smt_assert("equal", var_name, subtraction)
+
+			elif self.operator == '__rsub__':
+				subtraction = smt_subtract(cached_variables[self.operands[0]], operand_smt)
+				smt_encoding = smt_assert("equal", var_name, subtraction)
+
+			elif self.operator == '__truediv__':
+				truediv = smt_divide(cached_variables[self.object], operand_smt)
+				smt_encoding = smt_assert("equal", var_name, truediv)
+
+			elif self.operator == '__rtruediv__':
+				division = smt_divide(cached_variables[self.operands[0]], operand_smt)
+				smt_encoding = smt_assert("equal", var_name, division)
+
+			elif self.operator == '__mod__':
+				modular = smt_mod(cached_variables[self.object], operand_smt)
+				smt_encoding = smt_assert("equal", var_name, modular)
+
+			elif self.operator == '__rmod__':
+				modular = smt_mod(cached_variables[self.operands[0]], operand_smt)
+				smt_encoding = smt_assert("equal", var_name, modular)
+
+			else:
+				raise NotImplementedError
+
+			# TODO: floordiv, rfloordiv, divmod, rdivmod, pow, rpow
+			writeSMTtoFile(smt_file_path, smt_encoding)
+
+		elif self.operator == '__call__':
+			if isinstance(self.object, MethodDistribution):
+				methodDist = self.object
+				if methodDist.attribute == 'intersect':
+					return cacheVarName(cached_variables, self, var_name)
+
+		else:
+			raise NotImplementedError
+
+		return cacheVarName(cached_variables, self, var_name)
+
 	@staticmethod
 	def inferType(obj, operator):
 		if issubclass(obj.valueType, (float, int)):
@@ -546,6 +960,7 @@ class OperatorDistribution(Distribution):
 
 	def supportInterval(self):
 		if self.operator in ('__add__', '__radd__', '__sub__', '__rsub__', '__truediv__'):
+
 			assert len(self.operands) == 1
 			l1, r1 = supportInterval(self.object)
 			l2, r2 = supportInterval(self.operands[0])
@@ -642,6 +1057,33 @@ class Range(Distribution):
 		self.low = low
 		self.high = high
 
+	def encodeToSMT(self, smt_file_path, cached_variables, debug=False):
+		"""
+			smt_file_path must be an absolute path, not relative to a root of non-home folder
+			to avoid duplicate variable names, check for variable existence in cached_variables dict:
+		   cached_variables : key = obj, value = variable_name / key = 'variables', value = list(cached variables so far)
+		"""
+		if debug:
+			writeSMTtoFile(smt_file_path, "Range")
+		
+		if self in cached_variables.keys():
+			if debug:
+				print("Range object already exists in cached_variables dict: ", self)
+				writeSMTtoFile(smt_file_path, "already exists in cached_variables dict")
+			return cached_variables[self]
+
+		low = checkAndEncodeSMT(smt_file_path, cached_variables, self.low)
+		high = checkAndEncodeSMT(smt_file_path, cached_variables, self.high)
+
+		var_name = findVariableName(cached_variables, smt_file_path, cached_variables['variables'], 'range')
+
+		lower_bound = smt_lessThanEq(low, var_name)
+		upper_bound = smt_lessThanEq(var_name, high)
+		smt_encoding = smt_assert("and", lower_bound, upper_bound)
+		writeSMTtoFile(smt_file_path, smt_encoding)
+
+		return cacheVarName(cached_variables, self, var_name)
+
 	def __contains__(self, obj):
 		return low <= obj and obj <= high
 
@@ -687,6 +1129,22 @@ class Normal(Distribution):
 		super().__init__(mean, stddev, valueType=float)
 		self.mean = mean
 		self.stddev = stddev
+
+	def encodeToSMT(self, smt_file_path, cached_variables, debug=False):
+		"""to avoid duplicate variable names, check for variable existence in cached_variables dict:
+		   cached_variables : key = obj, value = variable_name / key = 'variables', value = list(cached variables so far)
+		"""
+		if debug:
+			writeSMTtoFile(smt_file_path, "Normal")
+		
+		if self in cached_variables.keys():
+			if debug:
+				print("Normal object already exists in cached_variables dict: ", self)
+				# writeSMTtoFile(smt_file_path, "already exists in cached_variables dict")
+			return cached_variables[self]
+
+		var_name = findVariableName(cached_variables, smt_file_path, cached_variables['variables'], 'normal')
+		return cacheVarName(cached_variables, self, var_name)
 
 	@staticmethod
 	def cdf(mean, stddev, x):
@@ -763,6 +1221,32 @@ class TruncatedNormal(Normal):
 		super().__init__(mean, stddev)
 		self.low = low
 		self.high = high
+
+	def encodeToSMT(self, smt_file_path, cached_variables, debug=False):
+		"""to avoid duplicate variable names, check for variable existence in cached_variables dict:
+		   cached_variables : key = obj, value = variable_name / key = 'variables', value = list(cached variables so far)
+		"""
+
+		if debug:
+			writeSMTtoFile(smt_file_path, "TruncatedNormal")
+		
+		if self in cached_variables.keys():
+			if debug:
+				print("TruncatedNormal object already exists in cached_variables dict: ", self)
+				# writeSMTtoFile(smt_file_path, "object already exists in cached_variables dict")
+			return cached_variables[self]
+
+		low = checkAndEncodeSMT(smt_file_path, cached_variables, self.low)
+		high = checkAndEncodeSMT(smt_file_path, cached_variables, self.high)
+
+		var_name = findVariableName(cached_variables, smt_file_path, cached_variables['variables'], 'truncated_normal')
+
+		lower_bound = smt_lessThanEq(low, var_name)
+		upper_bound = smt_lessThanEq(var_name, high)
+		smt_encoding = smt_assert("and", lower_bound, upper_bound)
+		writeSMTtoFile(smt_file_path, smt_encoding)
+
+		return cacheVarName(cached_variables, self, var_name)
 
 	def clone(self):
 		return type(self)(self.mean, self.stddev, self.low, self.high)
@@ -847,6 +1331,30 @@ class DiscreteRange(Distribution):
 		self.cumulativeWeights = tuple(itertools.accumulate(weights))
 		self.options = tuple(range(low, high+1))
 
+	def encodeToSMT(self, smt_file_path, cached_variables, debug=False):
+		"""to avoid duplicate variable names, check for variable existence in cached_variables dict:
+		   cached_variables : key = obj, value = variable_name / key = 'variables', value = list(cached variables so far)
+		"""
+		if debug:
+			writeSMTtoFile(smt_file_path, "DiscreteRange")
+
+		if self in cached_variables.keys():
+			if debug:
+				print("DiscreteRange object already exists in cached_variables dict: ", self)
+				# writeSMTtoFile(smt_file_path, "already exists in cached_variables dict")
+			return cached_variables[self]
+
+		low = checkAndEncodeSMT(smt_file_path, cached_variables, self.low)
+		high = checkAndEncodeSMT(smt_file_path, cached_variables, self.high)
+		var_name = findVariableName(cached_variables, smt_file_path, cached_variables['variables'], 'discrete_range', "Int")
+
+		lower_bound = smt_lessThanEq(low, var_name)
+		upper_bound = smt_lessThanEq(var_name, high)
+		smt_encoding = smt_assert("and", lower_bound, upper_bound)
+		writeSMTtoFile(smt_file_path, smt_encoding)
+		
+		return cacheVarName(cached_variables, self, var_name)
+
 	def __contains__(self, obj):
 		return low <= obj and obj <= high
 
@@ -879,7 +1387,7 @@ class Options(MultiplexerDistribution):
 			for opt, prob in opts.items():
 				if not isinstance(prob, (float, int)):
 					raise RuntimeParseError(f'discrete distribution weight {prob}'
-					                        ' is not a constant number')
+					                        ' is not a number')
 				if prob < 0:
 					raise RuntimeParseError(f'discrete distribution weight {prob} is negative')
 				if prob == 0:
@@ -896,6 +1404,30 @@ class Options(MultiplexerDistribution):
 
 		index = self.makeSelector(len(options)-1, weights)
 		super().__init__(index, options)
+
+	# def encodeToSMT(self, smt_file_path, cached_variables):
+	# 	"""to avoid duplicate variable names, check for variable existence in cached_variables dict:
+	# 	   cached_variables : key = obj, value = variable_name / key = 'variables', value = list(cached variables so far)
+	# 	"""
+	# 	print("currently do not have support for Options")
+	# 	writeSMTtoFile(smt_file_path, "Options currently not implemented")
+
+	# 	return cached_variables
+
+	def encodeToSMT(self, smt_file_path, cached_variables, obj=None, debug=False):
+		if debug:
+			writeSMTtoFile(smt_file_path, "Options class")
+			writeSMTtoFile(smt_file_path, str(self.options))
+		if self in cached_variables.keys():
+			return cached_variables[self]
+
+		options = self.options
+
+		raise NotImplementedError
+		# import scenic.domains.driving.roads as road_library
+		# if isinstance(options[0], road_library.LinearElement):
+
+
 
 	@staticmethod
 	def makeSelector(n, weights):

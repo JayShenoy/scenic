@@ -51,9 +51,9 @@ import numpy as np
 if 'map_options' not in globalParameters:
     param map_options = {}
 
-boston_network = Network.fromPickle('./boston_network.pickle')
+boston_network = Network.fromPickle('/Users/edwardkim/Desktop/scenic/src/scenic/domains/driving/boston_network.pickle')
 
-dataroot = '/home/bridge_simulator_to_realworld/nuscenes'
+dataroot = '/Users/edwardkim/Desktop/scenic'
 map_api = NuScenesMap(dataroot=dataroot, map_name='boston-seaport')
 
 def get_traffic_flow(point):

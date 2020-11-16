@@ -29,7 +29,7 @@ import weakref
 import attr
 from shapely.geometry import Polygon, MultiPolygon
 
-from scenic.core.distributions import distributionFunction, distributionMethod
+from scenic.core.distributions import distributionFunction, distributionMethod, MethodDistribution, writeSMTtoFile, Samplable
 from scenic.core.vectors import Vector, VectorField
 from scenic.core.regions import PolygonalRegion, PolylineRegion
 from scenic.core.object_types import Point
@@ -40,6 +40,7 @@ from scenic.core.distributions import RejectionException, distributionFunction
 import scenic.core.type_support as type_support
 from scenic.syntax.veneer import verbosePrint
 import scenic.syntax.veneer as veneer
+from scenic.core.regions import regionFromShapelyObject, PolygonalRegion
 
 ## Typing and utilities
 
@@ -1029,6 +1030,38 @@ class Network:
     def laneAt(self, point: Vectorlike, reject=False) -> Union[Lane, None]:
         """Get the `Lane` passing through a given point."""
         return self.findPointIn(point, self.lanes, reject)
+
+    def encodeToSMT(self, smt_file_path, cached_variables, obj=None, debug=False):
+        if debug:
+            writeSMTtoFile(smt_file_path, "Network Class")
+        
+        assert(isinstance(obj, Samplable))
+
+        if obj in cached_variables.keys():
+            return cached_variables[self]
+
+        if isinstance(obj, MethodDistribution):
+            method = obj.method
+            obj_method = obj.object
+            arguments = obj.arguments
+            kwargs = obj.kwargs
+        else:
+            raise NotImplementedError
+
+        if method == Network.laneAt:
+            if debug:
+                writeSMTtoFile(smt_file_path, "network.laneAt method detected")
+            car_obj = arguments[0]
+            position = car_obj.position._conditioned
+            lane = self.findPointIn(position, self.lanes, **kwargs)
+            shapely_polygon = lane.polygon
+            polygonalRegion = regionFromShapelyObject(shapely_polygon)
+            point = polygonalRegion.encodeToSMT(smt_file_path, cached_variables, debug=debug)
+            if debug:
+                writeSMTtoFile(smt_file_path, "PolygonalRegion constructed using the output of laneAt")
+                writeSMTtoFile(smt_file_path, "encoded PolygonalRegion and returned: "+ str(point))
+            return point
+            
 
     @distributionMethod
     def laneSectionAt(self, point: Vectorlike, reject=False) -> Union[LaneSection, None]:

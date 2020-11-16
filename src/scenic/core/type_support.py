@@ -6,7 +6,7 @@ import numbers
 import typing
 
 from scenic.core.distributions import (Distribution, RejectionException, StarredDistribution,
-                                       distributionFunction)
+                                       distributionFunction, writeSMTtoFile, Samplable, cacheVarName)
 from scenic.core.lazy_eval import (DelayedArgument, valueInContext, requiredProperties,
                                    needsLazyEvaluation, toDelayedArgument)
 from scenic.core.vectors import Vector
@@ -172,6 +172,19 @@ class TypecheckedDistribution(Distribution):
 		self.errorMessage = errorMessage
 		self.coercer = coercer
 		self.loc = saveErrorLocation()
+
+	def encodeToSMT(self, smt_file_path, cached_variables, obj=None, debug=False):
+		if debug:
+			writeSMTtoFile(smt_file_path, "TypecheckedDistribution")
+
+		if not isinstance(obj, Samplable):
+			obj = self
+		if obj in cached_variables.keys():
+			return cached_variables[obj]
+
+		output_var = self.dist.encodeToSMT(smt_file_path, cached_variables, debug = debug)
+		return cacheVarName(cached_variables, self, output_var)
+
 
 	def sampleGiven(self, value):
 		val = value[self.dist]
