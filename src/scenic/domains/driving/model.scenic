@@ -38,16 +38,54 @@ from scenic.domains.driving.behaviors import *
 from scenic.core.distributions import RejectionException
 from scenic.simulators.utils.colors import Color
 
+import pickle
+from nuscenes.map_expansion.map_api import NuScenesMap
+from scenic.core.vectors import VectorField
+import numpy as np
+
 ## Load map and set up workspace
 
-if 'map' not in globalParameters:
-    raise RuntimeError('need to specify map before importing driving model '
-                       '(set the global parameter "map")')
+# if 'map' not in globalParameters:
+#     raise RuntimeError('need to specify map before importing driving model '
+#                        '(set the global parameter "map")')
 if 'map_options' not in globalParameters:
     param map_options = {}
 
+boston_network = Network.fromPickle('./boston_network.pickle')
+
+dataroot = '/home/bridge_simulator_to_realworld/nuscenes'
+map_api = NuScenesMap(dataroot=dataroot, map_name='boston-seaport')
+
+def get_traffic_flow(point):
+    lane_token = map_api.record_on_point(point[0], point[1], 'lane')
+
+    if lane_token == '':
+        return 0
+
+    lane_rec = map_api.get('lane', lane_token)
+
+    from_edge = map_api.get('line', lane_rec['from_edge_line_token'])
+    to_edge = map_api.get('line', lane_rec['to_edge_line_token'])
+
+    from_nodes = [map_api.get('node', t) for t in from_edge['node_tokens']]
+    from_nodes = [np.array([n['x'], n['y']]) for n in from_nodes]
+    to_nodes = [map_api.get('node', t) for t in to_edge['node_tokens']]
+    to_nodes = [np.array([n['x'], n['y']]) for n in to_nodes]
+
+    # Compute traffic flow vector using midpoints of edges
+    from_mid = (from_nodes[0] + from_nodes[1]) / 2
+    to_mid = (to_nodes[0] + to_nodes[1]) / 2
+    traffic_flow_vec = to_mid - from_mid
+
+    heading = np.arctan2(traffic_flow_vec[1], traffic_flow_vec[0])
+
+    return heading - np.pi / 2
+
+boston_network.roadDirection = VectorField('roadDirection', get_traffic_flow)
+
 #: The road network being used for the scenario, as a `Network` object.
-network : Network = Network.fromFile(globalParameters.map, **globalParameters.map_options)
+# network : Network = Network.fromFile(globalParameters.map, **globalParameters.map_options)
+network: Network = boston_network
 
 workspace = DrivingWorkspace(network)
 

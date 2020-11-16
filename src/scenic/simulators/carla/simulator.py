@@ -212,6 +212,28 @@ class CarlaSimulation(DrivingSimulation):
 								lidar_sensor.listen(lambda x: self.process_lidar_data(x, sensor_dict['lidar_buffer']))
 								sensor_dict['lidar_obj'] = lidar_sensor
 
+							elif sensor['type'] == 'radar':
+								sensor_dict = {
+									'name': sensor['name'],
+									'type': sensor['type'],
+									'radar_buffer': []
+								}
+								self.sensors.append(sensor_dict)
+
+								HORIZONTAL_FOV = sensor['settings']['HORIZONTAL_FOV']
+								VERTICAL_FOV = sensor['settings']['VERTICAL_FOV']
+								POINTS_PER_SECOND = sensor['settings']['PPS']
+								RANGE = sensor['settings']['RANGE']
+
+								bp = self.world.get_blueprint_library().find('sensor.other.radar')
+								bp.set_attribute('horizontal_fov', str(HORIZONTAL_FOV))
+								bp.set_attribute('vertical_fov', str(VERTICAL_FOV))
+								bp.set_attribute('points_per_second', str(POINTS_PER_SECOND))
+								bp.set_attribute('range', str(RANGE))
+								radar_sensor = self.world.spawn_actor(bp, sensor_transform, attach_to=carlaActor)
+								radar_sensor.listen(lambda x: self.process_radar_data(x, sensor_dict['radar_buffer']))
+								sensor_dict['radar_obj'] = radar_sensor
+
 		self.world.tick() ## allowing manualgearshift to take effect 
 
 		for obj in self.objects:
@@ -319,6 +341,9 @@ class CarlaSimulation(DrivingSimulation):
 	def process_lidar_data(self, lidar_data, buffer):
 		buffer.append(lidar_data)
 
+	def process_radar_data(self, radar_data, buffer):
+		buffer.append(radar_data)
+
 	def save_recordings(self, save_dir):
 		if not self.record:
 			print('No recordings saved; turn on recordings for simulator to enable')
@@ -340,6 +365,8 @@ class CarlaSimulation(DrivingSimulation):
 				frame_idxes = frame_idxes.intersection({data.frame for data in sensor['semantic_buffer']})
 			elif sensor['type'] == 'lidar':
 				frame_idxes = {data.frame for data in sensor['lidar_buffer']}
+			elif sensor['type'] == 'radar':
+				frame_idxes = {data.frame for data in sensor['radar_buffer']}
 
 			if common_frame_idxes is None:
 				common_frame_idxes = frame_idxes
@@ -377,8 +404,9 @@ class CarlaSimulation(DrivingSimulation):
 				rgb_recording.save(rgb_filepath)
 				depth_recording.save(depth_filepath)
 				semantic_recording.save(semantic_filepath)
+
 			elif sensor['type'] == 'lidar':
-				lidar_recording = rec_utils.LidarRecording()
+				lidar_recording = rec_utils.FrameRecording()
 
 				lidar_data = {data.frame: data for data in sensor['lidar_buffer']}
 
@@ -393,6 +421,12 @@ class CarlaSimulation(DrivingSimulation):
 				lidar_filepath = os.path.join(sensor_dir, 'lidar.json')
 
 				lidar_recording.save(lidar_filepath)
+
+			elif sensor['type'] == 'radar':
+				radar_recording = rec_utils.FrameRecording()
+
+				radar_data = {data.frame: data for data in sensor['radar_buffer']}
+				
 
 		# Save bounding boxes
 		bbox_dir = os.path.join(save_dir, 'annotations')

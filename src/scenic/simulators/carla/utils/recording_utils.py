@@ -326,9 +326,9 @@ class VideoRecording:
 
         out.release()
 
-class LidarRecording:
+class FrameRecording:
     def __init__(self, frames=None):
-        # Each frame is a list of classified lidar points
+        # Each frame is a list of data, be it classified lidar points, radar, etc.
         self.frames = []
         if frames is not None:
             self.frames = frames
@@ -343,7 +343,7 @@ class LidarRecording:
         with open(filepath, 'r') as f:
             json_data = json.load(f)
 
-        return LidarRecording(json_data)
+        return FrameRecording(json_data)
 
     def save(self, filepath):
         with open(filepath, 'w') as f:

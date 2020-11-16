@@ -59,28 +59,36 @@ class SimulationData:
 
 				self.sensor_data[sensor['name']] = data
 
-	def get_frame(self, frame_idx):
+	def fetch_data_from_disk(self):
+		self.bbox_recording = rec_utils.BBoxRecording.import_from_file(self.bboxes_fpath)
+
+		for sensor in self.sensor_data.values():
+			if sensor['type'] == 'rgb':
+				recordings = {
+					'rgb': rec_utils.VideoRecording.import_from_file(sensor['data_paths']['rgb']),
+					'depth': rec_utils.VideoRecording.import_from_file(sensor['data_paths']['depth']),
+					'semantic': rec_utils.VideoRecording.import_from_file(sensor['data_paths']['semantic']),
+				}
+
+				sensor['recordings'] = recordings
+			elif sensor['type'] == 'lidar':
+				recordings = {
+					'lidar': rec_utils.FrameRecording.import_from_file(sensor['data_paths']['lidar']),
+				}
+
+				sensor['recordings'] = recordings
+
+		self.have_fetched_data = True
+
+	def __len__(self):
 		if not self.have_fetched_data:
-			# Retrieve data from disk
-			self.bbox_recording = rec_utils.BBoxRecording.import_from_file(self.bboxes_fpath)
+			self.fetch_data_from_disk()
 
-			for sensor in self.sensor_data.values():
-				if sensor['type'] == 'rgb':
-					recordings = {
-						'rgb': rec_utils.VideoRecording.import_from_file(sensor['data_paths']['rgb']),
-						'depth': rec_utils.VideoRecording.import_from_file(sensor['data_paths']['depth']),
-						'semantic': rec_utils.VideoRecording.import_from_file(sensor['data_paths']['semantic']),
-					}
+		return len(self.bbox_recording.frames)
 
-					sensor['recordings'] = recordings
-				elif sensor['type'] == 'lidar':
-					recordings = {
-						'lidar': rec_utils.LidarRecording.import_from_file(sensor['data_paths']['lidar']),
-					}
-
-					sensor['recordings'] = recordings
-
-			self.have_fetched_data = True
+	def __getitem__(self, frame_idx):
+		if not self.have_fetched_data:
+			self.fetch_data_from_disk()
 
 		retval = {}
 
@@ -242,6 +250,11 @@ def draw_bbox_2d(bboxes, sensor, img, output_filepath):
 		rect.append((bbox[0][0], bbox[0][1]))
 		draw.line(rect, fill=FILL, width=LINE_WIDTH)
 
+	im_pil.save(output_filepath)
+
+def save_frame(img, output_filepath):
+	frame = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+	im_pil = Image.fromarray(frame)
 	im_pil.save(output_filepath)
 
 def save_point_cloud(lidar_points, output_filepath):
