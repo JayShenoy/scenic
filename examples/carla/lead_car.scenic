@@ -8,3 +8,4 @@ ego = Car on lane
 leadCar = Car on visible ego.lane
 
 require (5 < distance from ego to leadCar) < 20
+require ego can see leadCar

@@ -13,7 +13,7 @@ from scenic.core.distributions import (Samplable, RejectionException, needsSampl
                                        distributionMethod, smt_add, smt_subtract, smt_multiply, 
                                        smt_divide, smt_and, smt_equal, smt_mod, smt_assert, findVariableName,
                                        checkAndEncodeSMT, writeSMTtoFile, cacheVarName, smt_lessThan, smt_lessThanEq,
-                                       smt_ite, normalizeAngle_SMT, smt_or, vector_operation_smt, Options)
+                                       smt_ite, normalizeAngle_SMT, smt_or, vector_operation_smt, Options, isNotConditioned)
 from scenic.core.lazy_eval import valueInContext
 from scenic.core.vectors import Vector, OrientedVector, VectorDistribution, VectorField, VectorOperatorDistribution
 from scenic.core.geometry import _RotatedRectangle
@@ -137,7 +137,7 @@ def pruneValidRegion(smt_file_path, cached_variables, region_polygon, debug=Fals
 		center = cached_variables['ego']
 		radius = cached_variables['ego_view_radius']
 		heading = cached_variables['ego'].heading
-		angle = cached_variables['ego_viewAngle'] * math.pi/180
+		angle = cached_variables['ego_viewAngle'] * math.pi / 180
 		sectorRegion = SectorRegion(center, radius, heading, angle)
 		cached_variables['ego_visibleRegion'] = sectorRegion
 		sector = sectorRegion.polygon
@@ -266,6 +266,11 @@ class PointInRegionDistribution(VectorDistribution):
 	def __init__(self, region):
 		super().__init__(region)
 		self.region = region
+
+	def conditionforSMT(self, condition, conditioned_bool):
+		if isinstance(self.region, Samplable) and isNotConditioned(self.region):
+			self.region.conditionforSMT(condition, conditioned_bool)
+		return None
 
 	def encodeToSMT(self, smt_file_path, cached_variables, obj=None, debug=False):
 		if debug:
@@ -486,6 +491,9 @@ class CircularRegion(Region):
 	def encodeToSMT(self, smt_file_path, cached_variables, obj, debug=False):
 		raise NotImplementedError
 
+	def conditionforSMT(self, condition, conditioned_bool):
+		raise NotImplementedError
+
 	@cached_property
 	def polygon(self):
 		assert not (needsSampling(self.center) or needsSampling(self.radius))
@@ -541,6 +549,18 @@ class SectorRegion(Region):
 		self.circumcircle = (self.center.offsetRadially(r, heading), r)
 		# In polygon(), buffer()'s resolution argument represents # of points to approximate 1/4 of a circle
 		self.resolution = int(resolution / 4)
+
+	def conditionforSMT(self, condition, conditioned_bool):
+		if isinstance(self.center, Samplable) and isNotConditioned(self.center):
+			self.center.conditionforSMT(condition, conditioned_bool)
+		if isinstance(self.radius, Samplable) and isNotConditioned(self.radius):
+			self.radius.conditionforSMT(condition, conditioned_bool)
+		if isinstance(self.heading, Samplable) and isNotConditioned(self.heading):
+			self.heading.conditionforSMT(condition, conditioned_bool)
+		if isinstance(self.angle, Samplable) and isNotConditioned(self.angle):
+			self.angle.conditionforSMT(condition, conditioned_bool)
+
+		return None
 
 	def encodeToSMT(self, smt_file_path, cached_variables, debug=False):
 		if debug:
@@ -628,7 +648,6 @@ class SectorRegion(Region):
 
 		return cacheVarName(cached_variables, self, (output_x, output_y))
 
-
 	@cached_property
 	def polygon(self):
 		center, radius = self.center, self.radius
@@ -700,6 +719,9 @@ class RectangularRegion(_RotatedRectangle, Region):
 		self.corners = tuple(position.offsetRotated(heading, Vector(*offset))
 			for offset in ((hw, hl), (-hw, hl), (-hw, -hl), (hw, -hl)))
 		self.circumcircle = (self.position, self.radius)
+
+	def conditionforSMT(self, condition, conditioned_bool):
+		raise NotImplementedError
 
 	def encodeToSMT(self, smt_file_path, cached_variables, obj, debug=False):
 		if not isinstance(obj, Samplable):
@@ -792,6 +814,8 @@ class PolylineRegion(Region):
 			pts.append(q)
 			self.points = pts
 
+	def conditionforSMT(self, condition, conditioned_bool):
+		raise NotImplementedError
 
 	def encodeToSMT(self, smt_file_path, cached_variables, debug = False):
 		if debug:
@@ -1023,6 +1047,9 @@ class PolygonalRegion(Region):
 		self.trianglesAndBounds = tuple((tri, tri.bounds) for tri in triangles)
 		areas = (triangle.area for triangle in triangles)
 		self.cumulativeTriangleAreas = tuple(itertools.accumulate(areas))
+
+	def conditionforSMT(self, condition, conditioned_bool):
+		raise NotImplementedError
 
 	def encodeToSMT(self, smt_file_path, cached_variables, debug=False):
 		if debug:
@@ -1335,6 +1362,11 @@ class IntersectionRegion(Region):
 			sampler = self.genericSampler
 		self.sampler = sampler
 
+	def conditionforSMT(self, condition, conditioned_bool):
+		for region in self.regions:
+			if isinstance(region, Samplable) and isNotConditioned(region):
+				region.conditionforSMT(condition, conditioned_bool)
+
 	def encodeToSMT(self, smt_file_path, cached_variables, debug=False):
 		if debug:
 			writeSMTtoFile(smt_file_path, "IntersectionRegion")
@@ -1405,6 +1437,12 @@ class DifferenceRegion(Region):
 		if sampler is None:
 			sampler = self.genericSampler
 		self.sampler = sampler
+
+	def conditionforSMT(self, condition, conditioned_bool):
+		raise NotImplementedError
+
+	def encodeToSMT(self, smt_file_path, cached_variables, debug=False):
+		raise NotImplementedError
 
 	def sampleGiven(self, value):
 		regionA, regionB = value[self.regionA], value[self.regionB]

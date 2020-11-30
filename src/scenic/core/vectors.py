@@ -14,7 +14,7 @@ import wrapt
 from scenic.core.distributions import (Samplable, Distribution, MethodDistribution,
     needsSampling, makeOperatorHandler, distributionMethod, distributionFunction,
 	RejectionException, smt_add, smt_subtract, smt_multiply, smt_divide, smt_and, 
-	smt_equal, smt_mod, smt_assert, findVariableName,
+	smt_equal, smt_mod, smt_assert, findVariableName,isNotConditioned,
 	checkAndEncodeSMT, writeSMTtoFile, cacheVarName, smt_lessThan, smt_lessThanEq, smt_ite, normalizeAngle_SMT, vector_operation_smt)
 from scenic.core.lazy_eval import valueInContext, needsLazyEvaluation, makeDelayedFunctionCall
 import scenic.core.utils as utils
@@ -54,6 +54,14 @@ class VectorOperatorDistribution(VectorDistribution):
 		self.operator = operator
 		self.object = obj
 		self.operands = operands
+
+	def conditionforSMT(self, condition, conditioned_bool):
+		if isinstance(self.object, Samplable) and isNotConditioned(self.object):
+			self.object.conditionforSMT(condition, conditioned_bool)
+		for op in self.operands:
+			if isinstance(op, Samplable) and isNotConditioned(op):
+				op.conditionforSMT(condition, conditioned_bool)
+		return None
 
 	def encodeToSMT(self, smt_file_path, cached_variables, debug=False):
 		# if not isinstance(obj, Samplable):
@@ -100,6 +108,17 @@ class VectorMethodDistribution(VectorDistribution):
 		self.object = obj
 		self.arguments = args
 		self.kwargs = kwargs
+
+	def conditionforSMT(self, condition, conditioned_bool):
+		if isinstance(self.object, Samplable) and isNotConditioned(self.object):
+			self.object.conditionforSMT(condition, conditioned_bool)
+		for arg in self.arguments:
+			if isinstance(arg, Samplable) and isNotConditioned(arg):
+				arg.conditionforSMT(condition, conditioned_bool)
+		for kwarg in self.kwargs:
+			if isinstance(kwarg, Samplable) and isNotConditioned(kwarg):
+				kwarg.conditionforSMT(condition, conditioned_bool)
+		return None
 
 	def sampleGiven(self, value):
 		args = (value[arg] for arg in self.arguments)
@@ -183,6 +202,12 @@ class Vector(Samplable, collections.abc.Sequence):
 	def y(self) -> float:
 		return self.coordinates[1]
 
+	def conditionforSMT(self, condition, conditioned_bool):
+		if isinstance(self.x, Samplable) and isNotConditioned(self.x):
+			self.x.conditionforSMT(condition, conditioned_bool)
+		if isinstance(self.y, Samplable) and isNotConditioned(self.y):
+			self.y.conditionforSMT(condition, conditioned_bool)
+		return None
 
 	def encodeRotatedBy_SMT(self, cached_variables, smt_file_path, angle, x, y, debug=False):
 		""" encodes rotatedBy function to a SMT formula 
@@ -628,6 +653,12 @@ class OrientedVector(Vector):
 		super().__init__(x, y)
 		self.heading = heading
 
+	def conditionforSMT(self, condition, conditioned_bool):
+		raise NotImplementedError
+
+	def encodeToSMT(self, smt_file_path, cached_variables, debug=False):
+		raise NotImplementedError
+
 	@staticmethod
 	@distributionFunction
 	def make(position, heading) -> OrientedVector:
@@ -660,6 +691,9 @@ class VectorField:
 		self.valueType = float
 		self.minSteps = minSteps
 		self.defaultStepSize = defaultStepSize
+
+	def conditionforSMT(self, condition, conditioned_bool):
+		raise NotImplementedError
 
 	def encodeToSMT(self, smt_file_path, cached_variables, obj, debug=False):
 		if debug:

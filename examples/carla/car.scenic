@@ -8,4 +8,4 @@ model scenic.domains.driving.model
 # require (5 < distance from ego to leadCar) < 20
 
 ego = Car on road
-Car ahead of ego by 5
+Car offset along (180 deg relative to ego.heading) by 20 @ 0
