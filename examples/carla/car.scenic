@@ -1,11 +1,12 @@
 #SET MODEL (i.e. definitions of all referenceable vehicle types, road library, etc)
 model scenic.domains.driving.model
 
-# lane = Uniform(*network.lanes)
-# ego = Car on lane
-# leadCar = Car on visible ego.lane
-
-# require (5 < distance from ego to leadCar) < 20
+param time = Range(10, 16) * 60
+param weather = Uniform('RAIN', 'THUNDER')
 
 ego = Car on road
-Car offset along (180 deg relative to ego.heading) by 20 @ 0
+spot = OrientedPoint on visible curb
+badAngle = Uniform(-1, 1) * Range(10, 20) deg
+
+badlyParkedCar = Car left of spot by 0.5,
+					facing badAngle relative to roadDirection

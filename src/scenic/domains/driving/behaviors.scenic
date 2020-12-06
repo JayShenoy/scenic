@@ -269,7 +269,6 @@ behavior FollowTrajectoryBehavior(target_speed = 10, trajectory = None):
         past_steer_angle = current_steer_angle
 
 
-
 behavior TurnBehavior(trajectory, target_speed=6):
     """
     This behavior uses a PID controller specifically tuned for turning at an intersection. 
